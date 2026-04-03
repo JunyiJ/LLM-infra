@@ -55,6 +55,12 @@ Install serving and benchmark extras on the Runpod machine:
 pip install vllm evalplus
 ```
 
+If you want cost-per-step logging on Runpod, set the GPU hourly price either in `configs/experiment.yaml` under `infra.gpu_hourly_cost_usd` or through:
+
+```bash
+export GPU_HOURLY_COST_USD=0.33
+```
+
 Prepare data:
 
 ```bash
@@ -91,6 +97,29 @@ python scripts/train_full_sft.py \
 ```
 
 This smoke config is only for validating the training loop, checkpointing, and eval hooks with a short sequence length and minimal batch settings. It is not intended for a real full-weight run on local hardware.
+
+## Run Outputs
+
+Each training run now records:
+
+- `runs/<run_name>/step_metrics.jsonl`: optimizer-step metrics including step time, tokens/sec, peak GPU memory, and cost per step
+- `runs/<run_name>/checkpoint_metrics.jsonl`: checkpoint size and write-time history
+- `runs/<run_name>/eval_metrics.jsonl`: validation loss over time
+- `runs/<run_name>/summary.json`: final run summary
+- `runs/<run_name>/run_report.md`: one-row markdown table for quick comparison
+- `runs/run_index.jsonl`: append-only run index across experiments
+
+The `run_report.md` table includes:
+
+- GPU
+- sequence length
+- batch size
+- gradient accumulation
+- average tokens/sec
+- peak VRAM
+- latest checkpoint size
+- resume success
+- final validation loss
 
 Serve:
 

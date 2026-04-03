@@ -4,10 +4,13 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import os
 import random
 import shutil
+import time
 from pathlib import Path
 
+import orjson
 import torch
 from tqdm import tqdm
 
@@ -68,10 +71,11 @@ def _save_checkpoint(
     resume_epoch: int,
     reason: str,
     save_total_limit: int | None,
-) -> None:
+) -> dict:
     checkpoint_dir = checkpoints_dir / f"checkpoint-{global_step:08d}"
     checkpoint_dir.mkdir(parents=True, exist_ok=True)
     saved_at = utc_now()
+    started_at = time.perf_counter()
     torch.save(
         {
             "model": model.state_dict(),
@@ -83,19 +87,23 @@ def _save_checkpoint(
         },
         checkpoint_dir / "training_state.pt",
     )
-    write_json(
-        checkpoint_dir / "metadata.json",
-        {
-            "global_step": global_step,
-            "resume_epoch": resume_epoch,
-            "reason": reason,
-            "saved_at": saved_at,
-        },
-    )
+    checkpoint_size_bytes = _directory_size_bytes(checkpoint_dir)
+    metadata = {
+        "global_step": global_step,
+        "resume_epoch": resume_epoch,
+        "reason": reason,
+        "saved_at": saved_at,
+        "checkpoint_dir": str(checkpoint_dir),
+        "checkpoint_size_bytes": checkpoint_size_bytes,
+        "checkpoint_size_gb": round(checkpoint_size_bytes / (1024 ** 3), 4),
+        "write_time_sec": round(time.perf_counter() - started_at, 4),
+    }
+    write_json(checkpoint_dir / "metadata.json", metadata)
     if save_total_limit is not None and save_total_limit > 0:
         checkpoints = _sorted_checkpoints(checkpoints_dir)
         for stale_checkpoint in checkpoints[:-save_total_limit]:
             shutil.rmtree(stale_checkpoint)
+    return metadata
 
 
 def _load_jsonl(path: Path) -> list[dict]:
@@ -122,6 +130,68 @@ def _num_optimizer_steps_per_epoch(num_examples: int, batch_size: int, accumulat
         return 0
     microbatches = math.ceil(num_examples / batch_size)
     return math.ceil(microbatches / accumulation_steps)
+
+
+def _directory_size_bytes(path: Path) -> int:
+    total = 0
+    for child in path.rglob("*"):
+        if child.is_file():
+            total += child.stat().st_size
+    return total
+
+
+def _gpu_name() -> str:
+    if torch.cuda.is_available():
+        return torch.cuda.get_device_name(torch.cuda.current_device())
+    if _mps_available():
+        return "Apple MPS"
+    return "cpu"
+
+
+def _peak_gpu_memory_bytes(device: torch.device) -> int | None:
+    if device.type != "cuda":
+        return None
+    return int(torch.cuda.max_memory_allocated(device))
+
+
+def _reset_peak_gpu_memory(device: torch.device) -> None:
+    if device.type == "cuda":
+        torch.cuda.reset_peak_memory_stats(device)
+
+
+def _sync_device(device: torch.device) -> None:
+    if device.type == "cuda":
+        torch.cuda.synchronize(device)
+
+
+def _append_jsonl(path: Path, payload: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "ab") as handle:
+        handle.write(orjson.dumps(payload, option=orjson.OPT_SORT_KEYS))
+        handle.write(b"\n")
+
+
+def _write_run_report(path: Path, rows: list[dict]) -> None:
+    headers = [
+        "run_name",
+        "gpu",
+        "seq_len",
+        "batch",
+        "grad_accum",
+        "tokens_per_sec",
+        "peak_vram_gb",
+        "checkpoint_gb",
+        "resume_success",
+        "final_val_loss",
+    ]
+    lines = [
+        "| " + " | ".join(headers) + " |",
+        "| " + " | ".join(["---"] * len(headers)) + " |",
+    ]
+    for row in rows:
+        values = [str(row.get(header, "")) for header in headers]
+        lines.append("| " + " | ".join(values) + " |")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def get_tokens_masks_labels(prompts, completions, tokenizer, device, max_length=None):
@@ -223,6 +293,14 @@ def main() -> None:
     checkpoints_dir = run_dir / "checkpoints"
     checkpoints_dir.mkdir(parents=True, exist_ok=True)
     started_at = utc_now()
+    run_metrics_path = run_dir / "step_metrics.jsonl"
+    checkpoint_metrics_path = run_dir / "checkpoint_metrics.jsonl"
+    run_report_path = run_dir / "run_report.md"
+    gpu_hourly_cost = cfg.get("infra", {}).get("gpu_hourly_cost_usd")
+    if gpu_hourly_cost is None:
+        env_cost = os.environ.get("GPU_HOURLY_COST_USD")
+        gpu_hourly_cost = float(env_cost) if env_cost else None
+    gpu_name = cfg.get("infra", {}).get("gpu_name") or _gpu_name()
 
 
     write_json(
@@ -232,14 +310,9 @@ def main() -> None:
             "run_name": args.run_name,
             "model": cfg["model"]["name_or_path"],
             "resume_from_checkpoint": args.resume_from_checkpoint,
-            "status": "scaffold_only",
-            "next_steps": [
-                "Implement tokenizer and model loading",
-                "Implement dataset loading from jsonl",
-                "Implement completion-only collation",
-                "Implement Trainer or custom loop",
-                "Implement checkpoint save and resume behavior",
-            ],
+            "status": "running",
+            "gpu_name": gpu_name,
+            "gpu_hourly_cost_usd": gpu_hourly_cost,
         },
     )
     model_cfg = cfg["model"]
@@ -276,6 +349,7 @@ def main() -> None:
     resume_checkpoint_path = _resolve_resume_checkpoint_path(args.resume_from_checkpoint, checkpoints_dir)
     resume_epoch = 0
     global_step = 0
+    resume_success: bool | None = None
     if resume_checkpoint_path is not None:
         checkpoint = torch.load(resume_checkpoint_path, map_location=DEVICE)
         model.load_state_dict(checkpoint["model"])
@@ -283,6 +357,7 @@ def main() -> None:
         _move_optimizer_state_to_device(optimizer, DEVICE)
         global_step = checkpoint.get("global_step", 0)
         resume_epoch = checkpoint.get("resume_epoch", checkpoint.get("epoch", 0))
+        resume_success = True
         print(
             f"Resumed from checkpoint {resume_checkpoint_path} "
             f"at optimizer step {global_step}, starting from epoch {resume_epoch}."
@@ -313,7 +388,12 @@ def main() -> None:
     last_saved_resume_epoch = resume_epoch if resume_checkpoint_path is not None else None
     last_train_avg_loss: float | None = None
     eval_history: list[dict] = []
+    checkpoint_history: list[dict] = []
     best_val_loss: float | None = None
+    step_records: list[dict] = []
+    total_step_time_sec = 0.0
+    total_step_tokens = 0
+    global_peak_memory_bytes = _peak_gpu_memory_bytes(DEVICE) or 0
     if resume_checkpoint_path is not None:
         scheduler.last_epoch = global_step - 1
     for epoch in range(resume_epoch, num_train_epochs):
@@ -323,7 +403,12 @@ def main() -> None:
         pbar = tqdm(range(0, len(shuffled_indices), train_batch_size), desc=f"epoch {epoch}", leave=False)
         accumulated_microbatches = 0
         accumulated_loss = 0.0
+        accumulated_tokens = 0
+        accumulated_supervised_tokens = 0
         optimizer.zero_grad(set_to_none=True)
+        _reset_peak_gpu_memory(DEVICE)
+        _sync_device(DEVICE)
+        optimizer_step_started_at = time.perf_counter()
         for start_idx in pbar:
             batch_indices = shuffled_indices[start_idx : start_idx + train_batch_size]
             batch = [train_dataset[index] for index in batch_indices]
@@ -336,6 +421,8 @@ def main() -> None:
                 DEVICE,
                 data_max_length
             )
+            accumulated_tokens += int(response_attn_mask.sum().item())
+            accumulated_supervised_tokens += int((labels != -100).sum().item())
             with torch.enable_grad():
                 outputs = model(
                     input_ids=response_ids,
@@ -352,16 +439,55 @@ def main() -> None:
                     or start_idx + train_batch_size >= len(shuffled_indices)
                 )
                 if should_step:
+                    _sync_device(DEVICE)
                     optimizer.step()
                     scheduler.step()
+                    _sync_device(DEVICE)
+                    step_time_sec = time.perf_counter() - optimizer_step_started_at
                     optimizer.zero_grad(set_to_none=True)
                     global_step += 1
+                    peak_memory_bytes = _peak_gpu_memory_bytes(DEVICE)
+                    if peak_memory_bytes is not None:
+                        global_peak_memory_bytes = max(global_peak_memory_bytes, peak_memory_bytes)
+                    tokens_per_sec = accumulated_tokens / step_time_sec if step_time_sec > 0 else None
+                    supervised_tokens_per_sec = (
+                        accumulated_supervised_tokens / step_time_sec if step_time_sec > 0 else None
+                    )
+                    step_cost_usd = (
+                        (gpu_hourly_cost * step_time_sec / 3600.0) if gpu_hourly_cost is not None else None
+                    )
+                    step_record = {
+                        "epoch": epoch,
+                        "optimizer_step": global_step,
+                        "microbatches": accumulated_microbatches,
+                        "avg_loss": accumulated_loss / accumulated_microbatches,
+                        "step_time_sec": round(step_time_sec, 4),
+                        "tokens": accumulated_tokens,
+                        "supervised_tokens": accumulated_supervised_tokens,
+                        "tokens_per_sec": round(tokens_per_sec, 2) if tokens_per_sec is not None else None,
+                        "supervised_tokens_per_sec": (
+                            round(supervised_tokens_per_sec, 2) if supervised_tokens_per_sec is not None else None
+                        ),
+                        "peak_gpu_memory_bytes": peak_memory_bytes,
+                        "peak_gpu_memory_gb": (
+                            round(peak_memory_bytes / (1024 ** 3), 4) if peak_memory_bytes is not None else None
+                        ),
+                        "cost_per_completed_optimizer_step_usd": (
+                            round(step_cost_usd, 6) if step_cost_usd is not None else None
+                        ),
+                        "logged_at": utc_now(),
+                    }
+                    step_records.append(step_record)
+                    _append_jsonl(run_metrics_path, step_record)
+                    total_step_time_sec += step_time_sec
+                    total_step_tokens += accumulated_tokens
                     if logging_steps and global_step % logging_steps == 0:
-                        avg_loss = accumulated_loss / accumulated_microbatches
-                        last_train_avg_loss = avg_loss
+                        last_train_avg_loss = step_record["avg_loss"]
                         tqdm.write(
                             f"epoch={epoch} optimizer_step={global_step} "
-                            f"microbatches={accumulated_microbatches} avg_loss={avg_loss:.4f}"
+                            f"microbatches={accumulated_microbatches} avg_loss={step_record['avg_loss']:.4f} "
+                            f"step_time={step_record['step_time_sec']:.2f}s "
+                            f"tokens_per_sec={step_record['tokens_per_sec']}"
                         )
                     if eval_steps and global_step % eval_steps == 0:
                         val_loss = evaluate_loss(
@@ -379,6 +505,7 @@ def main() -> None:
                             "evaluated_at": utc_now(),
                         }
                         eval_history.append(eval_record)
+                        _append_jsonl(run_dir / "eval_metrics.jsonl", eval_record)
                         if val_loss is not None and (best_val_loss is None or val_loss < best_val_loss):
                             best_val_loss = val_loss
                         tqdm.write(
@@ -387,7 +514,7 @@ def main() -> None:
                             f"eval epoch={epoch} optimizer_step={global_step} val_loss=NA"
                         )
                     if save_steps and global_step % save_steps == 0:
-                        _save_checkpoint(
+                        checkpoint_record = _save_checkpoint(
                             checkpoints_dir,
                             model=model,
                             optimizer=optimizer,
@@ -396,11 +523,17 @@ def main() -> None:
                             reason="mid_epoch",
                             save_total_limit=save_total_limit,
                         )
+                        checkpoint_history.append(checkpoint_record)
+                        _append_jsonl(checkpoint_metrics_path, checkpoint_record)
                         last_saved_global_step = global_step
                         last_saved_resume_epoch = epoch
+                    optimizer_step_started_at = time.perf_counter()
+                    _reset_peak_gpu_memory(DEVICE)
                     accumulated_microbatches = 0
                     accumulated_loss = 0.0
-        _save_checkpoint(
+                    accumulated_tokens = 0
+                    accumulated_supervised_tokens = 0
+        checkpoint_record = _save_checkpoint(
             checkpoints_dir,
             model=model,
             optimizer=optimizer,
@@ -409,12 +542,14 @@ def main() -> None:
             reason="epoch_end",
             save_total_limit=save_total_limit,
         )
+        checkpoint_history.append(checkpoint_record)
+        _append_jsonl(checkpoint_metrics_path, checkpoint_record)
         last_saved_global_step = global_step
         last_saved_resume_epoch = epoch + 1
 
     final_resume_epoch = num_train_epochs
     if global_step != last_saved_global_step or final_resume_epoch != last_saved_resume_epoch:
-        _save_checkpoint(
+        checkpoint_record = _save_checkpoint(
             checkpoints_dir,
             model=model,
             optimizer=optimizer,
@@ -423,6 +558,8 @@ def main() -> None:
             reason="train_end",
             save_total_limit=save_total_limit,
         )
+        checkpoint_history.append(checkpoint_record)
+        _append_jsonl(checkpoint_metrics_path, checkpoint_record)
     final_val_loss = evaluate_loss(
         model=model,
         dataset=val_dataset,
@@ -444,6 +581,35 @@ def main() -> None:
         if best_val_loss is None or final_val_loss < best_val_loss:
             best_val_loss = final_val_loss
 
+    avg_tokens_per_sec = (total_step_tokens / total_step_time_sec) if total_step_time_sec > 0 else None
+    avg_step_time_sec = (total_step_time_sec / global_step) if global_step > 0 else None
+    latest_checkpoint = _latest_checkpoint_path(checkpoints_dir)
+    latest_checkpoint_size_bytes = _directory_size_bytes(Path(latest_checkpoint).parent) if latest_checkpoint else None
+    run_table_row = {
+        "run_name": args.run_name,
+        "gpu": gpu_name,
+        "seq_len": data_max_length,
+        "batch": train_batch_size,
+        "grad_accum": accumulation_steps,
+        "tokens_per_sec": round(avg_tokens_per_sec, 2) if avg_tokens_per_sec is not None else "",
+        "peak_vram_gb": round(global_peak_memory_bytes / (1024 ** 3), 4) if global_peak_memory_bytes else "",
+        "checkpoint_gb": (
+            round(latest_checkpoint_size_bytes / (1024 ** 3), 4) if latest_checkpoint_size_bytes is not None else ""
+        ),
+        "resume_success": resume_success if resume_success is not None else "",
+        "final_val_loss": round(final_val_loss, 6) if final_val_loss is not None else "",
+    }
+    _write_run_report(run_report_path, [run_table_row])
+    _append_jsonl(
+        Path(train_cfg["output_root"]) / "run_index.jsonl",
+        {
+            **run_table_row,
+            "model": cfg["model"]["name_or_path"],
+            "gpu_hourly_cost_usd": gpu_hourly_cost,
+            "avg_step_time_sec": round(avg_step_time_sec, 4) if avg_step_time_sec is not None else None,
+            "latest_checkpoint": latest_checkpoint,
+        },
+    )
     summary = {
         "run_name": args.run_name,
         "status": "completed",
@@ -457,8 +623,30 @@ def main() -> None:
         "last_train_avg_loss": last_train_avg_loss,
         "final_val_loss": final_val_loss,
         "best_val_loss": best_val_loss,
-        "latest_checkpoint": _latest_checkpoint_path(checkpoints_dir),
+        "latest_checkpoint": latest_checkpoint,
+        "gpu_name": gpu_name,
+        "gpu_hourly_cost_usd": gpu_hourly_cost,
+        "avg_step_time_sec": avg_step_time_sec,
+        "avg_tokens_per_sec": avg_tokens_per_sec,
+        "peak_gpu_memory_bytes": global_peak_memory_bytes or None,
+        "peak_gpu_memory_gb": (
+            round(global_peak_memory_bytes / (1024 ** 3), 4) if global_peak_memory_bytes else None
+        ),
+        "resume_success": resume_success,
+        "latest_checkpoint_size_bytes": latest_checkpoint_size_bytes,
+        "latest_checkpoint_size_gb": (
+            round(latest_checkpoint_size_bytes / (1024 ** 3), 4)
+            if latest_checkpoint_size_bytes is not None
+            else None
+        ),
+        "cost_per_completed_optimizer_step_usd": (
+            round((gpu_hourly_cost * avg_step_time_sec / 3600.0), 6)
+            if gpu_hourly_cost is not None and avg_step_time_sec is not None
+            else None
+        ),
         "eval_history": eval_history,
+        "checkpoint_history": checkpoint_history,
+        "run_table": run_table_row,
     }
     write_json(run_dir / "summary.json", summary)
     write_json(
@@ -472,6 +660,8 @@ def main() -> None:
             "status": "completed",
             "optimizer_steps": global_step,
             "final_val_loss": final_val_loss,
+            "avg_tokens_per_sec": avg_tokens_per_sec,
+            "peak_gpu_memory_gb": summary["peak_gpu_memory_gb"],
             "summary_path": str(run_dir / "summary.json"),
         },
     )
