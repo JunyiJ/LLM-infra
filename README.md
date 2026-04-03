@@ -49,6 +49,40 @@ pip install -e .
 
 For local development on your Mac, this is enough for data prep, manifests, and training scaffolding.
 
+## Quick RunPod setup
+
+On a fresh RunPod machine, first set up GitHub SSH access:
+
+```bash
+mkdir -p ~/.ssh && chmod 700 ~/.ssh
+ssh-keygen -t ed25519 -C "runpod" -f ~/.ssh/id_ed25519 -N ""
+eval "$(ssh-agent -s)"
+ssh-add ~/.ssh/id_ed25519
+cat ~/.ssh/id_ed25519.pub
+```
+
+Copy the printed public key into GitHub under `Settings -> SSH and GPG keys -> New SSH key`, then trust GitHub and test the connection:
+
+```bash
+ssh-keyscan github.com >> ~/.ssh/known_hosts
+chmod 644 ~/.ssh/known_hosts
+ssh -T git@github.com
+```
+
+Clone the repo over SSH and install the Python environment:
+
+```bash
+git clone git@github.com:<owner>/LLM-infra.git
+cd LLM-infra
+
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+pip install -e .
+```
+
+This repo uses `pyproject.toml`, so add or update Python requirements there and rerun `pip install -e .` after changes.
+
 Install serving and benchmark extras on the Runpod machine:
 
 ```bash
