@@ -82,6 +82,16 @@ python scripts/train_full_sft.py \
   --run-name qwen25_1p5b_apps_full_sft
 ```
 
+Local smoke test on Mac:
+
+```bash
+python scripts/train_full_sft.py \
+  --config configs/mac_smoke_test.yaml \
+  --run-name qwen25_1p5b_apps_mac_smoke
+```
+
+This smoke config is only for validating the training loop, checkpointing, and eval hooks with a short sequence length and minimal batch settings. It is not intended for a real full-weight run on local hardware.
+
 Serve:
 
 ```bash
