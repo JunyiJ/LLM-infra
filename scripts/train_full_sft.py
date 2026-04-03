@@ -5,8 +5,6 @@ import argparse
 import json
 import torch
 import random
-import torch.nn as nn
-import torch.nn.functional as F
 from pathlib import Path
 from tqdm import tqdm
 
@@ -83,7 +81,7 @@ def get_tokens_masks_approx(prompts, texts, tokenizer, device, max_length=None):
     return input_ids, attention_mask, answer_mask
 
 
-def get_tokens_masks_exact(prompts, completions, tokenizer, device, max_length=None):
+def get_tokens_masks_labels(prompts, completions, tokenizer, device, max_length=None):
     pad_token_id = tokenizer.pad_token_id
     if pad_token_id is None:
         pad_token_id = tokenizer.eos_token_id
@@ -93,7 +91,7 @@ def get_tokens_masks_exact(prompts, completions, tokenizer, device, max_length=N
 
     input_id_rows: list[list[int]] = []
     attention_mask_rows: list[list[int]] = []
-    answer_mask_rows: list[list[float]] = []
+    label_rows: list[list[int]] = []
 
     for prompt_ids, completion_ids in zip(
         prompt_encodings["input_ids"],
@@ -104,38 +102,30 @@ def get_tokens_masks_exact(prompts, completions, tokenizer, device, max_length=N
             input_ids = input_ids[:max_length]
 
         effective_prompt_len = min(len(prompt_ids), len(input_ids))
-        seq_len = len(input_ids)
-        shifted_len = max(seq_len - 1, 0)
-
-        answer_mask = [0.0] * shifted_len
-        for pos in range(max(effective_prompt_len - 1, 0), shifted_len):
-            answer_mask[pos] = 1.0
 
         input_id_rows.append(input_ids)
-        attention_mask_rows.append([1] * seq_len)
-        answer_mask_rows.append(answer_mask)
+        attention_mask_rows.append([1] * len(input_ids))
+        label_rows.append([-100] * effective_prompt_len + completion_ids[:len(input_ids) - effective_prompt_len])
 
     max_seq_len = max(len(row) for row in input_id_rows)
-    max_shifted_len = max(max_seq_len - 1, 0)
 
     padded_input_ids = []
     padded_attention_masks = []
-    padded_answer_masks = []
-    for input_ids, attention_mask, answer_mask in zip(
+    padded_labels = []
+    for input_ids, attention_mask, labels in zip(
         input_id_rows,
         attention_mask_rows,
-        answer_mask_rows,
+        label_rows,
     ):
         pad_len = max_seq_len - len(input_ids)
-        shifted_pad_len = max_shifted_len - len(answer_mask)
         padded_input_ids.append(input_ids + [pad_token_id] * pad_len)
         padded_attention_masks.append(attention_mask + [0] * pad_len)
-        padded_answer_masks.append(answer_mask + [0.0] * shifted_pad_len)
+        padded_labels.append(labels + [-100] * pad_len)
 
     return (
         torch.tensor(padded_input_ids, device=device),
         torch.tensor(padded_attention_masks, device=device),
-        torch.tensor(padded_answer_masks, device=device),
+        torch.tensor(padded_labels, device=device),
     )
 
 def main() -> None:
@@ -206,7 +196,7 @@ def main() -> None:
             batch = train_dataset[idx : idx + batch_size]
             prompts = [record['prompt'] for record in batch]
             completions = [record['completion'] for record in batch]
-            response_ids, response_attn_mask, completion_mask = get_tokens_masks_exact(
+            response_ids, response_attn_mask, labels = get_tokens_masks_labels(
                 prompts,
                 completions,
                 tokenizer,
@@ -215,13 +205,12 @@ def main() -> None:
             )
             model.train()
             with torch.enable_grad():
-                response = model(input_ids=response_ids, attention_mask=response_attn_mask)
-                # B, T-1, V
-                response_logits = response.logits[:, :-1, :]
-                # B, T-1
-                response_targets = response_ids[:, 1:]
-                loss = F.cross_entropy(response_logits.reshape(-1, response_logits.size(-1)), response_targets.reshape(-1), reduction="none").view(response_targets.shape)
-                loss = (loss * completion_mask).sum() / completion_mask.sum()
+                outputs = model(
+                    input_ids=response_ids,
+                    attention_mask=response_attn_mask,
+                    labels=labels
+                )
+                loss = outputs.loss
                 loss.backward()
                 optimizer.step()
                 optimizer.zero_grad(set_to_none=True)
