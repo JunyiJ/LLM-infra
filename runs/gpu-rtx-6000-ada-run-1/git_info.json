@@ -1,0 +1,12 @@
+{
+  "available": true,
+  "branch": "main",
+  "captured_at": "2026-04-04T03:56:11+00:00",
+  "command": "scripts/train_full_sft.py --config configs/experiment.yaml --run-name gpu-rtx-6000-ada-run-1",
+  "commit": "2fb00ff3128251311dc81fed0cf6132c31a311cb",
+  "is_dirty": true,
+  "repo_root": "/workspace/LLM-infra",
+  "status_short": [
+    "?? runs/gpu-rtx-6000-ada-run-1/"
+  ]
+}

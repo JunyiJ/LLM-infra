@@ -1,0 +1,14 @@
+{
+  "avg_tokens_per_sec": 5857.231522951266,
+  "exported_model_dir": "runs/gpu-rtx-6000-ada-run-1/final",
+  "final_val_loss": 0.7749998502364741,
+  "finished_at": "2026-04-04T04:01:19+00:00",
+  "model": "Qwen/Qwen2.5-1.5B-Instruct",
+  "optimizer_steps": 56,
+  "peak_gpu_memory_gb": 15.8146,
+  "resume_from_checkpoint": null,
+  "run_name": "gpu-rtx-6000-ada-run-1",
+  "started_at": "2026-04-04T03:56:11+00:00",
+  "status": "completed",
+  "summary_path": "runs/gpu-rtx-6000-ada-run-1/summary.json"
+}
