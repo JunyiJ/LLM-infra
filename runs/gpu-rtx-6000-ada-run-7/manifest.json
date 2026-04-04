@@ -8,7 +8,7 @@
   ],
   "config": {
     "data": {
-      "max_length": 2048,
+      "max_length": 1024,
       "train_path": "data/apps/train.jsonl",
       "val_path": "data/apps/val.jsonl"
     },
@@ -56,8 +56,8 @@
     }
   },
   "config_path": "/workspace/LLM-infra/configs/experiment.yaml",
-  "config_sha256": "76e20b3cfa8ac04724f538fb692c3b3652a7e6cda01a0c27f19964f9092d75f3",
-  "created_at": "2026-04-04T04:31:43+00:00",
+  "config_sha256": "a1afe8eb1b0b5b746867f61e617417aac2c584672797ff7befcf64c507d770af",
+  "created_at": "2026-04-04T20:58:59+00:00",
   "data": {
     "train_path": "/workspace/LLM-infra/data/apps/train.jsonl",
     "train_sha256": "a20f127c199020cd4fa9cadd2cd01d46abde2aca7b803c4ee46e34975e41d6be",
@@ -74,13 +74,18 @@
   "git": {
     "available": true,
     "branch": "main",
-    "captured_at": "2026-04-04T04:31:43+00:00",
+    "captured_at": "2026-04-04T20:58:59+00:00",
     "command": "scripts/train_full_sft.py --config configs/experiment.yaml --run-name gpu-rtx-6000-ada-run-7",
-    "commit": "e3888a312b3280b1b4768bf9add93a8e21e1131b",
+    "commit": "b0054f0e9c1c2e60f3e1b0c286c5459feaaf7103",
     "is_dirty": true,
     "repo_root": "/workspace/LLM-infra",
     "status_short": [
-      "?? runs/gpu-rtx-6000-ada-run-7/"
+      "M runs/gpu-rtx-6000-ada-run-7/config_snapshot.yaml",
+      " M runs/gpu-rtx-6000-ada-run-7/eval_metrics.jsonl",
+      " M runs/gpu-rtx-6000-ada-run-7/git_info.json",
+      " M runs/gpu-rtx-6000-ada-run-7/manifest.json",
+      " M runs/gpu-rtx-6000-ada-run-7/run_state.json",
+      " M runs/gpu-rtx-6000-ada-run-7/step_metrics.jsonl"
     ]
   },
   "model": "Qwen/Qwen2.5-1.5B-Instruct",

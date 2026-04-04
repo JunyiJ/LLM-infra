@@ -8,7 +8,7 @@ model:
 data:
   train_path: data/apps/train.jsonl
   val_path: data/apps/val.jsonl
-  max_length: 2048
+  max_length: 1024
 train:
   output_root: runs
   seed: 42
@@ -40,6 +40,6 @@ infra:
   gpu_hourly_cost_usd: 0.77
 _metadata:
   config_path: /workspace/LLM-infra/configs/experiment.yaml
-  config_sha256: 76e20b3cfa8ac04724f538fb692c3b3652a7e6cda01a0c27f19964f9092d75f3
+  config_sha256: a1afe8eb1b0b5b746867f61e617417aac2c584672797ff7befcf64c507d770af
   command: scripts/train_full_sft.py --config configs/experiment.yaml --run-name gpu-rtx-6000-ada-run-7
-  captured_at: '2026-04-04T04:31:42+00:00'
+  captured_at: '2026-04-04T20:58:59+00:00'
