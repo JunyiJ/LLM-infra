@@ -1,0 +1,91 @@
+{
+  "avg_step_time_sec": 3.725685244226562,
+  "avg_tokens_per_sec": 6701.840008429076,
+  "best_val_loss": 0.7433719126053273,
+  "checkpoint_history": [
+    {
+      "checkpoint_dir": "runs/gpu-rtx-6000-ada-run-3/checkpoints/checkpoint-00000020",
+      "checkpoint_size_bytes": 9262725709,
+      "checkpoint_size_gb": 8.6266,
+      "global_step": 20,
+      "reason": "mid_epoch",
+      "resume_epoch": 0,
+      "saved_at": "2026-04-04T04:15:43+00:00",
+      "write_time_sec": 13.245
+    },
+    {
+      "checkpoint_dir": "runs/gpu-rtx-6000-ada-run-3/checkpoints/checkpoint-00000040",
+      "checkpoint_size_bytes": 9262725709,
+      "checkpoint_size_gb": 8.6266,
+      "global_step": 40,
+      "reason": "mid_epoch",
+      "resume_epoch": 0,
+      "saved_at": "2026-04-04T04:17:20+00:00",
+      "write_time_sec": 14.3166
+    },
+    {
+      "checkpoint_dir": "runs/gpu-rtx-6000-ada-run-3/checkpoints/checkpoint-00000056",
+      "checkpoint_size_bytes": 9262725709,
+      "checkpoint_size_gb": 8.6266,
+      "global_step": 56,
+      "reason": "epoch_end",
+      "resume_epoch": 1,
+      "saved_at": "2026-04-04T04:18:36+00:00",
+      "write_time_sec": 15.1846
+    }
+  ],
+  "cost_per_completed_optimizer_step_usd": 0.000797,
+  "eval_history": [
+    {
+      "epoch": 0,
+      "evaluated_at": "2026-04-04T04:15:43+00:00",
+      "global_step": 20,
+      "val_loss": 0.7458288941005259
+    },
+    {
+      "epoch": 0,
+      "evaluated_at": "2026-04-04T04:17:20+00:00",
+      "global_step": 40,
+      "val_loss": 0.7433963485486326
+    },
+    {
+      "epoch": 1,
+      "evaluated_at": "2026-04-04T04:19:02+00:00",
+      "global_step": 56,
+      "reason": "train_end",
+      "val_loss": 0.7433719126053273
+    }
+  ],
+  "exported_model_dir": "runs/gpu-rtx-6000-ada-run-3/final",
+  "final_val_loss": 0.7433719126053273,
+  "finished_at": "2026-04-04T04:19:07+00:00",
+  "gpu_hourly_cost_usd": 0.77,
+  "gpu_name": "NVIDIA RTX 6000 Ada Generation",
+  "last_train_avg_loss": 0.8437948040664196,
+  "latest_checkpoint": "runs/gpu-rtx-6000-ada-run-3/checkpoints/checkpoint-00000056/training_state.pt",
+  "latest_checkpoint_size_bytes": 9262726004,
+  "latest_checkpoint_size_gb": 8.6266,
+  "model": "Qwen/Qwen2.5-1.5B-Instruct",
+  "num_train_epochs": 1,
+  "optimizer_steps": 56,
+  "peak_gpu_memory_bytes": 34256365568,
+  "peak_gpu_memory_gb": 31.9037,
+  "resume_success": null,
+  "run_name": "gpu-rtx-6000-ada-run-3",
+  "run_table": {
+    "batch": 2,
+    "checkpoint_gb": 8.6266,
+    "final_val_loss": 0.743372,
+    "gpu": "NVIDIA RTX 6000 Ada Generation",
+    "grad_accum": 16,
+    "peak_vram_gb": 31.9037,
+    "resume_success": "",
+    "run_name": "gpu-rtx-6000-ada-run-3",
+    "seq_len": 2048,
+    "tokens_per_sec": 6701.84
+  },
+  "started_at": "2026-04-04T04:14:07+00:00",
+  "status": "completed",
+  "train_rows": 1783,
+  "val_rows": 300
+}
