@@ -43,4 +43,4 @@ eval:
 
 infra:
   gpu_name: null
-  gpu_hourly_cost_usd: null
+  gpu_hourly_cost_usd: 0.77
