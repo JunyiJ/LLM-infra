@@ -148,11 +148,15 @@ This smoke config is only for validating the training loop, checkpointing, and e
 
 Each training run now records:
 
+- `runs/<run_name>/config_snapshot.yaml`: exact config snapshot used for the run
+- `runs/<run_name>/manifest.json`: run manifest with config hash, data hashes, command, and environment info
+- `runs/<run_name>/git_info.json`: git branch, commit, and dirty-worktree state at launch time
 - `runs/<run_name>/step_metrics.jsonl`: optimizer-step metrics including step time, tokens/sec, peak GPU memory, and cost per step
 - `runs/<run_name>/checkpoint_metrics.jsonl`: checkpoint size and write-time history
 - `runs/<run_name>/eval_metrics.jsonl`: validation loss over time
 - `runs/<run_name>/summary.json`: final run summary
 - `runs/<run_name>/run_report.md`: one-row markdown table for quick comparison
+- `runs/<run_name>/final/`: exported Hugging Face model directory for inference and vLLM serving
 - `runs/run_index.jsonl`: append-only run index across experiments
 
 The `run_report.md` table includes:
@@ -170,7 +174,7 @@ The `run_report.md` table includes:
 Serve:
 
 ```bash
-bash scripts/serve_vllm.sh runs/qwen25_1p5b_apps_full_sft/checkpoints/final
+bash scripts/serve_vllm.sh runs/qwen25_1p5b_apps_full_sft/final
 ```
 
 Evaluate:

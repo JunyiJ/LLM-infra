@@ -7,6 +7,8 @@ import math
 import os
 import random
 import shutil
+import subprocess
+import sys
 import time
 from pathlib import Path
 
@@ -14,7 +16,7 @@ import orjson
 import torch
 from tqdm import tqdm
 
-from llm_infra_lab.manifest import load_yaml, utc_now, write_json
+from llm_infra_lab.manifest import load_yaml, sha256_file, utc_now, write_json, write_yaml
 from transformers import AutoTokenizer, AutoModelForCausalLM, get_linear_schedule_with_warmup
 
 def _mps_available() -> bool:
@@ -171,6 +173,118 @@ def _append_jsonl(path: Path, payload: dict) -> None:
         handle.write(b"\n")
 
 
+def _export_inference_model(
+    *,
+    run_dir: Path,
+    model: AutoModelForCausalLM,
+    tokenizer: AutoTokenizer,
+) -> Path:
+    export_dir = run_dir / "final"
+    if export_dir.exists():
+        shutil.rmtree(export_dir)
+    export_dir.mkdir(parents=True, exist_ok=True)
+
+    # Training disables KV-cache for gradient checkpointing, but inference wants it enabled.
+    if hasattr(model.config, "use_cache"):
+        model.config.use_cache = True
+
+    model.save_pretrained(export_dir, safe_serialization=False)
+    tokenizer.save_pretrained(export_dir)
+    write_json(
+        export_dir / "export_metadata.json",
+        {
+            "exported_at": utc_now(),
+            "format": "huggingface_pretrained",
+            "safe_serialization": False,
+        },
+    )
+    return export_dir
+
+
+def _git_output(args: list[str], cwd: Path) -> str | None:
+    try:
+        return subprocess.check_output(["git", *args], cwd=cwd, text=True).strip()
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return None
+
+
+def _collect_git_info(cwd: Path) -> dict:
+    repo_root = _git_output(["rev-parse", "--show-toplevel"], cwd)
+    if repo_root is None:
+        return {
+            "available": False,
+            "repo_root": None,
+            "branch": None,
+            "commit": None,
+            "is_dirty": None,
+        }
+
+    status = _git_output(["status", "--short"], cwd) or ""
+    return {
+        "available": True,
+        "repo_root": repo_root,
+        "branch": _git_output(["rev-parse", "--abbrev-ref", "HEAD"], cwd),
+        "commit": _git_output(["rev-parse", "HEAD"], cwd),
+        "is_dirty": bool(status),
+        "status_short": status.splitlines(),
+    }
+
+
+def _write_run_metadata(
+    *,
+    run_dir: Path,
+    args: argparse.Namespace,
+    cfg: dict,
+    config_path: Path,
+    train_path: Path,
+    val_path: Path,
+    gpu_name: str,
+    gpu_hourly_cost: float | None,
+) -> None:
+    config_snapshot = dict(cfg)
+    config_snapshot["_metadata"] = {
+        "config_path": str(config_path),
+        "config_sha256": sha256_file(config_path),
+        "command": " ".join(sys.argv),
+        "captured_at": utc_now(),
+    }
+    write_yaml(run_dir / "config_snapshot.yaml", config_snapshot)
+
+    git_info = {
+        **_collect_git_info(Path.cwd()),
+        "command": " ".join(sys.argv),
+        "captured_at": utc_now(),
+    }
+    write_json(run_dir / "git_info.json", git_info)
+
+    manifest = {
+        "created_at": utc_now(),
+        "run_name": args.run_name,
+        "project": cfg["project"]["name"],
+        "model": cfg["model"]["name_or_path"],
+        "config_path": str(config_path),
+        "config_sha256": sha256_file(config_path),
+        "resume_from_checkpoint": args.resume_from_checkpoint,
+        "command": sys.argv,
+        "git": git_info,
+        "environment": {
+            "python": sys.version,
+            "torch": torch.__version__,
+            "device": str(DEVICE),
+            "gpu_name": gpu_name,
+            "gpu_hourly_cost_usd": gpu_hourly_cost,
+        },
+        "data": {
+            "train_path": str(train_path),
+            "train_sha256": sha256_file(train_path),
+            "val_path": str(val_path),
+            "val_sha256": sha256_file(val_path),
+        },
+        "config": cfg,
+    }
+    write_json(run_dir / "manifest.json", manifest)
+
+
 def _write_run_report(path: Path, rows: list[dict]) -> None:
     headers = [
         "run_name",
@@ -286,8 +400,9 @@ def evaluate_loss(
 
 def main() -> None:
     args = parse_args()
-    cfg = load_yaml(args.config)
-    config_dir = Path(args.config).resolve().parent
+    config_path = Path(args.config).resolve()
+    cfg = load_yaml(config_path)
+    config_dir = config_path.parent
     train_cfg = cfg["train"]
     run_dir = Path(train_cfg["output_root"]) / args.run_name
     checkpoints_dir = run_dir / "checkpoints"
@@ -301,6 +416,20 @@ def main() -> None:
         env_cost = os.environ.get("GPU_HOURLY_COST_USD")
         gpu_hourly_cost = float(env_cost) if env_cost else None
     gpu_name = cfg.get("infra", {}).get("gpu_name") or _gpu_name()
+    data_cfg = cfg["data"]
+    train_path = (config_dir.resolve().parent / data_cfg["train_path"]).resolve()
+    val_path = (config_dir.resolve().parent / data_cfg["val_path"]).resolve()
+
+    _write_run_metadata(
+        run_dir=run_dir,
+        args=args,
+        cfg=cfg,
+        config_path=config_path,
+        train_path=train_path,
+        val_path=val_path,
+        gpu_name=gpu_name,
+        gpu_hourly_cost=gpu_hourly_cost,
+    )
 
 
     write_json(
@@ -329,9 +458,6 @@ def main() -> None:
     )
     model.to(DEVICE)
 
-    data_cfg = cfg["data"]
-    train_path = (config_dir.resolve().parent  / data_cfg["train_path"]).resolve()
-    val_path = (config_dir.resolve().parent  / data_cfg["val_path"]).resolve()
     train_dataset = _load_jsonl(train_path)
     val_dataset = _load_jsonl(val_path)
     data_max_length = data_cfg.get("max_length", 2048)
@@ -581,6 +707,11 @@ def main() -> None:
         if best_val_loss is None or final_val_loss < best_val_loss:
             best_val_loss = final_val_loss
 
+    exported_model_dir = _export_inference_model(
+        run_dir=run_dir,
+        model=model,
+        tokenizer=tokenizer,
+    )
     avg_tokens_per_sec = (total_step_tokens / total_step_time_sec) if total_step_time_sec > 0 else None
     avg_step_time_sec = (total_step_time_sec / global_step) if global_step > 0 else None
     latest_checkpoint = _latest_checkpoint_path(checkpoints_dir)
@@ -608,6 +739,7 @@ def main() -> None:
             "gpu_hourly_cost_usd": gpu_hourly_cost,
             "avg_step_time_sec": round(avg_step_time_sec, 4) if avg_step_time_sec is not None else None,
             "latest_checkpoint": latest_checkpoint,
+            "exported_model_dir": str(exported_model_dir),
         },
     )
     summary = {
@@ -624,6 +756,7 @@ def main() -> None:
         "final_val_loss": final_val_loss,
         "best_val_loss": best_val_loss,
         "latest_checkpoint": latest_checkpoint,
+        "exported_model_dir": str(exported_model_dir),
         "gpu_name": gpu_name,
         "gpu_hourly_cost_usd": gpu_hourly_cost,
         "avg_step_time_sec": avg_step_time_sec,
@@ -663,9 +796,13 @@ def main() -> None:
             "avg_tokens_per_sec": avg_tokens_per_sec,
             "peak_gpu_memory_gb": summary["peak_gpu_memory_gb"],
             "summary_path": str(run_dir / "summary.json"),
+            "exported_model_dir": str(exported_model_dir),
         },
     )
-    print(f"Training complete. Summary written to {run_dir / 'summary.json'}")
+    print(
+        f"Training complete. Summary written to {run_dir / 'summary.json'}. "
+        f"Exported inference model to {exported_model_dir}"
+    )
 
 
 if __name__ == "__main__":

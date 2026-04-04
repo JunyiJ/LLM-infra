@@ -8,7 +8,9 @@ runs/*
 !runs/**/*.json
 !runs/**/*.jsonl
 !runs/**/*.md
+!runs/**/*.yaml
 !runs/**/
 runs/**/checkpoints/
+runs/**/final/
 artifacts/
 *.pyc
