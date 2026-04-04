@@ -1,0 +1,14 @@
+{
+  "model": "Qwen/Qwen2.5-1.5B-Instruct",
+  "next_steps": [
+    "Implement tokenizer and model loading",
+    "Implement dataset loading from jsonl",
+    "Implement completion-only collation",
+    "Implement Trainer or custom loop",
+    "Implement checkpoint save and resume behavior"
+  ],
+  "resume_from_checkpoint": null,
+  "run_name": "qwen25_test",
+  "started_at": "2026-04-02T05:18:13+00:00",
+  "status": "scaffold_only"
+}
