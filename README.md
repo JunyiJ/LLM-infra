@@ -28,6 +28,9 @@ The point is not to implement another PPO or GRPO variant. The point is to opera
 - `scripts/make_manifest.py`: writes a run manifest that ties data, model, and output paths together
 - `scripts/serve_vllm.sh`: serves a checkpoint with vLLM
 - `scripts/run_evalplus.sh`: runs EvalPlus against an OpenAI-compatible endpoint
+- `scripts/smoke_test_vllm.py`: sends one smoke-test request to a vLLM endpoint
+- `scripts/benchmark_vllm.py`: collects serving latency and tokens/sec from a vLLM endpoint
+- `scripts/sample_gpu_memory.sh`: samples GPU memory and utilization with `nvidia-smi`
 - `src/llm_infra_lab/`: prompt formatting and manifest helpers
 
 ## Recommended workflow
@@ -177,11 +180,57 @@ Serve:
 bash scripts/serve_vllm.sh runs/qwen25_1p5b_apps_full_sft/final
 ```
 
+Smoke test the served checkpoint:
+
+```bash
+python scripts/smoke_test_vllm.py \
+  --base-url http://127.0.0.1:8000/v1 \
+  --api-key local-dev \
+  --model qwen25-1p5b-apps-full-sft
+```
+
+Collect serving metrics:
+
+```bash
+python scripts/benchmark_vllm.py \
+  --base-url http://127.0.0.1:8000/v1 \
+  --api-key local-dev \
+  --model qwen25-1p5b-apps-full-sft \
+  --benchmark-name base_model_serving \
+  --output runs/base_model_serving_metrics.json
+```
+
+Sample GPU memory while serving or benchmarking:
+
+```bash
+bash scripts/sample_gpu_memory.sh runs/base_model_gpu_memory.csv 1
+```
+
 Evaluate:
 
 ```bash
+export OPENAI_API_KEY=local-dev
 bash scripts/run_evalplus.sh http://127.0.0.1:8000/v1 Qwen/Qwen2.5-1.5B-Instruct humaneval
 ```
+
+## Inference Evaluation Workflow
+
+To collect both quality and serving metrics, do the following for the `base model` and then repeat for the `tuned model`.
+
+1. Start vLLM with the target model.
+2. In a second shell, start GPU memory sampling with `scripts/sample_gpu_memory.sh`.
+3. Run `scripts/benchmark_vllm.py` to collect latency and tokens/sec.
+4. Run `scripts/run_evalplus.sh` to collect benchmark quality metrics such as `pass@1`.
+5. Stop the memory sampler and keep the CSV with the benchmark output.
+
+This gives you the full comparison surface:
+
+- model name: from the vLLM served model name and benchmark output file
+- benchmark: from EvalPlus
+- pass@1: from EvalPlus
+- latency: from `benchmark_vllm.py`
+- tokens/sec: from `benchmark_vllm.py`
+- GPU memory: from `sample_gpu_memory.sh`
 
 ## Prompt format
 
