@@ -1,0 +1,2 @@
+{"checkpoint_dir":"runs/gpu-rtx-6000-ada-run-8/checkpoints/checkpoint-00000020","checkpoint_size_bytes":9262725709,"checkpoint_size_gb":8.6266,"global_step":20,"reason":"mid_epoch","resume_epoch":0,"saved_at":"2026-04-04T21:13:56+00:00","write_time_sec":19.9268}
+{"checkpoint_dir":"runs/gpu-rtx-6000-ada-run-8/checkpoints/checkpoint-00000028","checkpoint_size_bytes":9262725709,"checkpoint_size_gb":8.6266,"global_step":28,"reason":"epoch_end","resume_epoch":1,"saved_at":"2026-04-04T21:15:33+00:00","write_time_sec":20.2344}
