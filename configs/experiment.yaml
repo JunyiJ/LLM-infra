@@ -10,7 +10,7 @@ model:
 data:
   train_path: data/apps/train.jsonl
   val_path: data/apps/val.jsonl
-  max_length: 1024
+  max_length: 2048
 
 train:
   output_root: runs
