@@ -51,42 +51,54 @@ For local development on your Mac, this is enough for data prep, manifests, and 
 
 ## Quick RunPod setup
 
-On a fresh RunPod machine, first set up GitHub SSH access:
+Attach a network volume and keep the repo, virtualenv, caches, models, and checkpoints under `/workspace`. For this project, `50 GB` is a practical minimum if everything lives there.
+
+Use GitHub over HTTPS instead of SSH:
 
 ```bash
-mkdir -p ~/.ssh && chmod 700 ~/.ssh
-ssh-keygen -t ed25519 -C "runpod" -f ~/.ssh/id_ed25519 -N ""
-eval "$(ssh-agent -s)"
-ssh-add ~/.ssh/id_ed25519
-cat ~/.ssh/id_ed25519.pub
+cd /workspace
+git clone https://github.com/JunyiJ/LLM-infra.git
+cd /workspace/LLM-infra
+git remote set-url origin https://github.com/JunyiJ/LLM-infra.git
+git config --global credential.helper "store --file=/workspace/.git-credentials"
 ```
 
-Copy the printed public key into GitHub under `Settings -> SSH and GPG keys -> New SSH key`, then trust GitHub and test the connection:
+When you push, Git will prompt for your GitHub username and a Personal Access Token instead of an SSH key.
+
+Set up the Python environment under `/workspace`:
 
 ```bash
-ssh-keyscan github.com >> ~/.ssh/known_hosts
-chmod 644 ~/.ssh/known_hosts
-ssh -T git@github.com
-```
-
-Clone the repo over SSH and install the Python environment:
-
-```bash
-git clone git@github.com:<owner>/LLM-infra.git
-cd LLM-infra
-
-python3 -m venv .venv
-source .venv/bin/activate
+python3 -m venv /workspace/LLM-infra/.venv
+source /workspace/LLM-infra/.venv/bin/activate
 python -m pip install --upgrade pip
-pip install -e .
+pip install --no-cache-dir -e .
+pip install --no-cache-dir vllm evalplus
 ```
 
-This repo uses `pyproject.toml`, so add or update Python requirements there and rerun `pip install -e .` after changes.
+This repo uses `pyproject.toml`, so add or update Python requirements there and rerun `pip install --no-cache-dir -e .` after changes.
 
-Install serving and benchmark extras on the Runpod machine:
+If you want to keep temp files and package caches on the network volume too:
 
 ```bash
-pip install vllm evalplus
+mkdir -p /workspace/tmp /workspace/pip-cache /workspace/hf-home /workspace/.cache
+export TMPDIR=/workspace/tmp
+export PIP_CACHE_DIR=/workspace/pip-cache
+export HF_HOME=/workspace/hf-home
+export XDG_CACHE_HOME=/workspace/.cache
+export HF_HUB_CACHE=/workspace/hf-home/hub
+```
+
+When you recreate a pod with the same network volume, you do not need to reinstall the environment. Restore the same environment variables and reactivate the existing virtualenv:
+
+```bash
+export TMPDIR=/workspace/tmp
+export PIP_CACHE_DIR=/workspace/pip-cache
+export HF_HOME=/workspace/hf-home
+export XDG_CACHE_HOME=/workspace/.cache
+export HF_HUB_CACHE=/workspace/hf-home/hub
+
+cd /workspace/LLM-infra
+source /workspace/LLM-infra/.venv/bin/activate
 ```
 
 If you want cost-per-step logging on Runpod, set the GPU hourly price either in `configs/experiment.yaml` under `infra.gpu_hourly_cost_usd` or through:
