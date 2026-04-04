@@ -23,8 +23,8 @@ train:
   weight_decay: 0.01
   warmup_ratio: 0.03
   logging_steps: 10
-  save_steps: 100
-  eval_steps: 100
+  save_steps: 20
+  eval_steps: 20
   save_total_limit: 1
   gradient_checkpointing: true
   bf16: true
