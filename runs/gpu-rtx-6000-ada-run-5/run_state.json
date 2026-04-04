@@ -1,0 +1,9 @@
+{
+  "gpu_hourly_cost_usd": 0.77,
+  "gpu_name": "NVIDIA RTX 6000 Ada Generation",
+  "model": "Qwen/Qwen2.5-1.5B-Instruct",
+  "resume_from_checkpoint": null,
+  "run_name": "gpu-rtx-6000-ada-run-5",
+  "started_at": "2026-04-04T04:26:19+00:00",
+  "status": "running"
+}
