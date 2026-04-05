@@ -8,7 +8,6 @@ import orjson
 from datasets import load_dataset
 from huggingface_hub import hf_hub_url
 from llm_infra_lab.apps import AppsRecord, select_passing_solution
-from llm_infra_lab.prompting import render_apps_prompt
 
 
 def parse_args() -> argparse.Namespace:
@@ -49,15 +48,16 @@ def build_stub_record(row: dict) -> dict | None:
     record = AppsRecord(
         task_id=task_id,
         difficulty=difficulty,
-        prompt=render_apps_prompt(question, starter_code),
+        question=question,
+        starter_code=starter_code,
         completion=completion,
     )
     return {
         "task_id": record.task_id,
         "difficulty": record.difficulty,
-        "prompt": record.prompt,
+        "question": record.question,
+        "starter_code": record.starter_code,
         "completion": record.completion,
-        "text": record.text,
         "source": record.source,
         "sample_hash": record.sample_hash,
     }

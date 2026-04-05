@@ -16,6 +16,7 @@ import orjson
 import torch
 from tqdm import tqdm
 
+from llm_infra_lab.apps import row_prompt
 from llm_infra_lab.manifest import load_yaml, sha256_file, utc_now, write_json, write_yaml
 from transformers import AutoTokenizer, AutoModelForCausalLM, get_linear_schedule_with_warmup
 
@@ -374,7 +375,7 @@ def evaluate_loss(
     with torch.no_grad():
         for start_idx in range(0, len(dataset), batch_size):
             batch = dataset[start_idx : start_idx + batch_size]
-            prompts = [record["prompt"] for record in batch]
+            prompts = [row_prompt(record) for record in batch]
             completions = [record["completion"] for record in batch]
             input_ids, attention_mask, labels = get_tokens_masks_labels(
                 prompts,
@@ -538,7 +539,7 @@ def main() -> None:
         for start_idx in pbar:
             batch_indices = shuffled_indices[start_idx : start_idx + train_batch_size]
             batch = [train_dataset[index] for index in batch_indices]
-            prompts = [record["prompt"] for record in batch]
+            prompts = [row_prompt(record) for record in batch]
             completions = [record["completion"] for record in batch]
             response_ids, response_attn_mask, labels = get_tokens_masks_labels(
                 prompts,

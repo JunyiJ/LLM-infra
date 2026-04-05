@@ -10,14 +10,21 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from llm_infra_lab.prompting import render_apps_prompt
+
 
 @dataclass(slots=True)
 class AppsRecord:
     task_id: str
     difficulty: str
-    prompt: str
+    question: str
+    starter_code: str | None
     completion: str
     source: str = "codeparrot/apps"
+
+    @property
+    def prompt(self) -> str:
+        return render_apps_prompt(self.question, self.starter_code)
 
     @property
     def text(self) -> str:
@@ -25,8 +32,26 @@ class AppsRecord:
 
     @property
     def sample_hash(self) -> str:
-        payload = f"{self.task_id}\n{self.prompt}\n{self.completion}".encode("utf-8")
+        payload = (
+            f"{self.task_id}\n{self.question}\n{self.starter_code or ''}\n{self.completion}"
+        ).encode("utf-8")
         return hashlib.sha256(payload).hexdigest()
+
+
+def row_prompt(row: dict) -> str:
+    prompt = row.get("prompt")
+    if isinstance(prompt, str) and prompt:
+        return prompt
+    question = (row.get("question") or "").strip()
+    starter_code = (row.get("starter_code") or "").strip() or None
+    return render_apps_prompt(question, starter_code)
+
+
+def row_text(row: dict) -> str:
+    text = row.get("text")
+    if isinstance(text, str) and text:
+        return text
+    return f"{row_prompt(row)}{row['completion']}"
 
 
 def is_valid_python(code: str) -> bool:

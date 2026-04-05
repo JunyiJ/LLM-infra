@@ -5,6 +5,7 @@ import argparse
 import json
 from pathlib import Path
 
+from llm_infra_lab.apps import row_prompt
 from llm_infra_lab.manifest import load_yaml
 from transformers import AutoTokenizer
 
@@ -58,7 +59,7 @@ def main() -> None:
     total = 0
 
     for row in rows:
-        prompt = row["prompt"]
+        prompt = row_prompt(row)
         completion = row["completion"]
         full_text = prompt + completion
 

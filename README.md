@@ -122,6 +122,8 @@ python scripts/prepare_apps.py \
   --difficulty interview,competition
 ```
 
+Prepared APPS rows now store raw task fields and render prompts at training time. If you already have older jsonl files with baked-in prompts, they still work, but new prompt changes only require rerunning training, not regenerating the dataset.
+
 Generate a manifest:
 
 ```bash
@@ -249,10 +251,10 @@ python scripts/dump_humaneval_samples.py \
 
 Each training row should be converted into:
 
-- `prompt`: system and user text with problem statement and optional starter code
+- raw task fields such as `question` and optional `starter_code`
 - `completion`: one canonical Python solution
 
-The prompt should ask for `code only` output. This keeps the training target aligned with functional code benchmarks.
+The trainer renders the prompt from those raw fields at runtime. The prompt should ask for `code only` output. This keeps the training target aligned with functional code benchmarks.
 
 ## What you should implement yourself
 
