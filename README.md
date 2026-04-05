@@ -31,6 +31,7 @@ The point is not to implement another PPO or GRPO variant. The point is to opera
 - `scripts/smoke_test_vllm.py`: sends one smoke-test request to a vLLM endpoint
 - `scripts/benchmark_vllm.py`: collects serving latency and tokens/sec from a vLLM endpoint
 - `scripts/sample_gpu_memory.sh`: samples GPU memory and utilization with `nvidia-smi`
+- `scripts/dump_humaneval_samples.py`: dumps HumanEval prompts and served-model completions for side-by-side inspection
 - `src/llm_infra_lab/`: prompt formatting and manifest helpers
 
 ## Recommended workflow
@@ -231,6 +232,18 @@ This gives you the full comparison surface:
 - latency: from `benchmark_vllm.py`
 - tokens/sec: from `benchmark_vllm.py`
 - GPU memory: from `sample_gpu_memory.sh`
+
+To inspect raw HumanEval outputs from the base and tuned models:
+
+```bash
+python scripts/dump_humaneval_samples.py \
+  --base-url http://127.0.0.1:8000/v1 \
+  --api-key local-dev \
+  --model qwen25-1p5b-base \
+  --model qwen25-1p5b-sft-run-2 \
+  --max-samples 10 \
+  --output runs/humaneval_base_vs_tuned_samples.json
+```
 
 ## Prompt format
 
