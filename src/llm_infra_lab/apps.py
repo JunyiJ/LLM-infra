@@ -62,6 +62,129 @@ def is_valid_python(code: str) -> bool:
         return False
 
 
+def top_level_function_names(code: str) -> list[str]:
+    try:
+        tree = ast.parse(code)
+    except SyntaxError:
+        return []
+    return [node.name for node in tree.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))]
+
+
+def has_main_block(code: str) -> bool:
+    try:
+        tree = ast.parse(code)
+    except SyntaxError:
+        return False
+    for node in tree.body:
+        if not isinstance(node, ast.If):
+            continue
+        test = node.test
+        if not isinstance(test, ast.Compare) or len(test.ops) != 1 or len(test.comparators) != 1:
+            continue
+        if not isinstance(test.ops[0], ast.Eq):
+            continue
+        left = test.left
+        right = test.comparators[0]
+        if isinstance(left, ast.Name) and left.id == "__name__" and isinstance(right, ast.Constant) and right.value == "__main__":
+            return True
+    return False
+
+
+def strip_main_block(code: str) -> str:
+    try:
+        tree = ast.parse(code)
+    except SyntaxError:
+        return code
+    lines = code.splitlines()
+    removal_ranges: list[tuple[int, int]] = []
+    for node in tree.body:
+        if not isinstance(node, ast.If):
+            continue
+        test = node.test
+        if not isinstance(test, ast.Compare) or len(test.ops) != 1 or len(test.comparators) != 1:
+            continue
+        if not isinstance(test.ops[0], ast.Eq):
+            continue
+        left = test.left
+        right = test.comparators[0]
+        if isinstance(left, ast.Name) and left.id == "__name__" and isinstance(right, ast.Constant) and right.value == "__main__":
+            if hasattr(node, "lineno") and hasattr(node, "end_lineno"):
+                removal_ranges.append((node.lineno - 1, node.end_lineno))
+    if not removal_ranges:
+        return code
+
+    kept: list[str] = []
+    cursor = 0
+    for start, end in sorted(removal_ranges):
+        kept.extend(lines[cursor:start])
+        cursor = end
+    kept.extend(lines[cursor:])
+    cleaned = "\n".join(kept).rstrip()
+    return f"{cleaned}\n" if cleaned else ""
+
+
+def completion_quality_stats(code: str) -> dict[str, Any]:
+    function_names = top_level_function_names(code)
+    stripped_lines = [line for line in code.splitlines() if line.strip()]
+    return {
+        "top_level_function_names": function_names,
+        "top_level_function_count": len(function_names),
+        "has_main_block": has_main_block(code),
+        "has_doctest": "doctest" in code,
+        "has_code_fence": "```" in code,
+        "line_count": len(stripped_lines),
+        "char_count": len(code),
+    }
+
+
+def completion_quality_score(
+    code: str,
+    *,
+    target_fn_name: str | None,
+) -> float:
+    stats = completion_quality_stats(code)
+    score = 0.0
+    score += min(stats["line_count"], 400) / 20.0
+    score += min(stats["char_count"], 8000) / 1000.0
+    if stats["has_main_block"]:
+        score += 8.0
+    if stats["has_doctest"]:
+        score += 6.0
+    if stats["has_code_fence"]:
+        score += 10.0
+    if target_fn_name is not None:
+        fn_names = stats["top_level_function_names"]
+        if target_fn_name not in fn_names:
+            score += 100.0
+        extra_names = [name for name in fn_names if name != target_fn_name]
+        score += len(extra_names) * 12.0
+    else:
+        # Script-style tasks can legitimately avoid function definitions, but a long list of
+        # unrelated helper functions is still a bad fit for HumanEval-like behavior.
+        score += max(stats["top_level_function_count"] - 2, 0) * 8.0
+    return score
+
+
+def is_completion_acceptable(
+    code: str,
+    *,
+    target_fn_name: str | None,
+) -> tuple[bool, str | None]:
+    stats = completion_quality_stats(code)
+    if stats["has_code_fence"]:
+        return False, "code_fence"
+    if target_fn_name is not None:
+        fn_names = stats["top_level_function_names"]
+        if target_fn_name not in fn_names:
+            return False, "missing_target_fn"
+        extra_names = [name for name in fn_names if name != target_fn_name]
+        if extra_names:
+            return False, "extra_top_level_functions"
+    if stats["line_count"] > 200:
+        return False, "too_long"
+    return True, None
+
+
 _CALL_BASED_RUNNER = """
 import importlib.util
 import json
@@ -153,17 +276,23 @@ def select_passing_solution(
 
     spec = parse_apps_input_output(input_output_raw)
     if spec is None:
-        for solution in solutions:
-            if is_valid_python(solution):
+        valid_solutions = [solution for solution in solutions if is_valid_python(solution)]
+        if not valid_solutions:
+            return None
+        cleaned = [strip_main_block(solution) for solution in valid_solutions]
+        ranked = sorted(cleaned, key=lambda solution: completion_quality_score(solution, target_fn_name=None))
+        for solution in ranked:
+            ok, _ = is_completion_acceptable(solution, target_fn_name=None)
+            if ok:
                 return solution
-        return None
-
+        return ranked[0] if ranked else None
+    target_fn_name = spec.get("fn_name") if isinstance(spec.get("fn_name"), str) and spec.get("fn_name") else None
     inputs = spec.get("inputs")
     outputs = spec.get("outputs")
     if not isinstance(inputs, list) or not isinstance(outputs, list) or len(inputs) != len(outputs):
         return None
 
-    fn_name = spec.get("fn_name")
+    passing_solutions: list[str] = []
     for solution in solutions:
         if not is_valid_python(solution):
             continue
@@ -172,15 +301,25 @@ def select_passing_solution(
             actual_output = run_python_solution(
                 solution,
                 case_input,
-                fn_name=fn_name if isinstance(fn_name, str) and fn_name else None,
+                fn_name=target_fn_name,
                 timeout_sec=timeout_sec,
             )
             if actual_output is _EXECUTION_FAILED or not outputs_match(actual_output, expected_output):
                 passed = False
                 break
         if passed:
-            return solution
-    return None
+            passing_solutions.append(strip_main_block(solution))
+    if not passing_solutions:
+        return None
+
+    ranked = sorted(
+        passing_solutions,
+        key=lambda solution: completion_quality_score(solution, target_fn_name=target_fn_name),
+    )
+    acceptable_ranked = [
+        solution for solution in ranked if is_completion_acceptable(solution, target_fn_name=target_fn_name)[0]
+    ]
+    return acceptable_ranked[0] if acceptable_ranked else ranked[0]
 
 
 def run_python_solution(
