@@ -1,23 +1,25 @@
 {
   "dataset_name": "codeparrot/apps",
-  "train_rows": 1742,
+  "train_rows": 1423,
   "val_rows": 300,
   "difficulty": [
-    "competition",
     "interview"
   ],
   "train_skips": {
-    "difficulty_filtered": 2353,
+    "difficulty_filtered": 2635,
     "extra_top_level_functions": 58,
     "missing_target_fn": 57,
-    "no_passing_solution": 788,
-    "too_long": 2
+    "no_passing_solution": 786,
+    "test_or_main_function": 34,
+    "too_long": 1,
+    "variant_function_names": 6
   },
   "val_skips": {
-    "no_passing_solution": 20
+    "no_passing_solution": 19,
+    "test_or_main_function": 1
   },
   "next_steps": [
-    "Inspect the skip counters for extra_top_level_functions and missing_target_fn",
+    "Inspect the skip counters for test_or_main_function, variant_function_names, and extra_top_level_functions",
     "Try interview-only data if HumanEval still regresses",
     "Tune timeout and acceptance rules for harder APPS problems"
   ]

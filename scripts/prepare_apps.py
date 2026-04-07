@@ -150,7 +150,7 @@ def main() -> None:
         "train_skips": dict(sorted(train_skips.items())),
         "val_skips": dict(sorted(val_skips.items())),
         "next_steps": [
-            "Inspect the skip counters for extra_top_level_functions and missing_target_fn",
+            "Inspect the skip counters for test_or_main_function, variant_function_names, and extra_top_level_functions",
             "Try interview-only data if HumanEval still regresses",
             "Tune timeout and acceptance rules for harder APPS problems",
         ],

@@ -123,7 +123,7 @@ python scripts/prepare_apps.py \
 ```
 
 Prepared APPS rows now store raw task fields and render prompts at training time. If you already have older jsonl files with baked-in prompts, they still work, but new prompt changes only require rerunning training, not regenerating the dataset.
-The preparation step now also filters for cleaner completions by preferring passing solutions without `__main__` harnesses, markdown fences, or extra top-level functions for call-based tasks. Check `data/apps/summary.json` after generation to see how many rows were skipped for each reason.
+The preparation step now also filters for cleaner completions by preferring passing solutions without `__main__` harnesses, `main`/`test_*` helper functions, markdown fences, repeated variant function names like `_2`, or extra top-level functions for call-based tasks. Check `data/apps/summary.json` after generation to see how many rows were skipped for each reason.
 
 Generate a manifest:
 

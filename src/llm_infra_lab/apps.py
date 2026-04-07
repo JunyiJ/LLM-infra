@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast
 import hashlib
 import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -126,9 +127,15 @@ def strip_main_block(code: str) -> str:
 def completion_quality_stats(code: str) -> dict[str, Any]:
     function_names = top_level_function_names(code)
     stripped_lines = [line for line in code.splitlines() if line.strip()]
+    variant_function_names = [name for name in function_names if re.search(r"_\d+$", name)]
+    test_like_function_names = [
+        name for name in function_names if name == "main" or name.startswith("test_") or name.startswith("check_")
+    ]
     return {
         "top_level_function_names": function_names,
         "top_level_function_count": len(function_names),
+        "variant_function_names": variant_function_names,
+        "test_like_function_names": test_like_function_names,
         "has_main_block": has_main_block(code),
         "has_doctest": "doctest" in code,
         "has_code_fence": "```" in code,
@@ -152,6 +159,8 @@ def completion_quality_score(
         score += 6.0
     if stats["has_code_fence"]:
         score += 10.0
+    score += len(stats["test_like_function_names"]) * 12.0
+    score += len(stats["variant_function_names"]) * 10.0
     if target_fn_name is not None:
         fn_names = stats["top_level_function_names"]
         if target_fn_name not in fn_names:
@@ -173,6 +182,10 @@ def is_completion_acceptable(
     stats = completion_quality_stats(code)
     if stats["has_code_fence"]:
         return False, "code_fence"
+    if stats["test_like_function_names"]:
+        return False, "test_or_main_function"
+    if stats["variant_function_names"]:
+        return False, "variant_function_names"
     if target_fn_name is not None:
         fn_names = stats["top_level_function_names"]
         if target_fn_name not in fn_names:
