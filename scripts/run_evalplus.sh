@@ -15,11 +15,13 @@ if [[ "${BENCHMARK}" == "humaneval" ]]; then
     --dataset humaneval \
     --backend openai \
     --model "${MODEL_NAME}" \
-    --base-url "${OPENAI_API_BASE}"
+    --base-url "${OPENAI_API_BASE}" \
+    --greedy
 else
   evalplus.evaluate \
     --dataset mbpp \
     --backend openai \
     --model "${MODEL_NAME}" \
-    --base-url "${OPENAI_API_BASE}"
+    --base-url "${OPENAI_API_BASE}" \
+    --greedy
 fi

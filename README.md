@@ -217,6 +217,77 @@ export OPENAI_API_KEY=local-dev
 bash scripts/run_evalplus.sh http://127.0.0.1:8000/v1 Qwen/Qwen2.5-1.5B-Instruct humaneval
 ```
 
+## Reusable New Model Commands
+
+For any newly trained model exported to `/workspace/LLM-infra/runs/<run_name>/final`, use one environment variable and derive everything else from it:
+
+```bash
+export RUN_NAME=new-data-run-9
+export MODEL_DIR="/workspace/LLM-infra/runs/${RUN_NAME}/final"
+export SERVED_MODEL_NAME="qwen25-1p5b-${RUN_NAME}"
+export OPENAI_API_KEY=local-dev
+```
+
+1. Serve the new model with vLLM:
+
+```bash
+vllm serve "${MODEL_DIR}" \
+  --tokenizer Qwen/Qwen2.5-1.5B-Instruct \
+  --served-model-name "${SERVED_MODEL_NAME}" \
+  --host 0.0.0.0 \
+  --port 8000 \
+  --dtype auto \
+  --api-key local-dev \
+  --generation-config vllm \
+  --gpu-memory-utilization 0.9 \
+  --max-model-len 4096
+```
+
+2. Run HumanEval for the new model:
+
+```bash
+bash scripts/run_evalplus.sh \
+  http://127.0.0.1:8000/v1 \
+  "${SERVED_MODEL_NAME}" \
+  humaneval
+```
+
+3. Run the serving benchmark for the new model:
+
+```bash
+python scripts/benchmark_vllm.py \
+  --base-url http://127.0.0.1:8000/v1 \
+  --api-key local-dev \
+  --model "${SERVED_MODEL_NAME}" \
+  --benchmark-name "${RUN_NAME}_serving" \
+  --output "runs/${RUN_NAME}_serving_metrics.json"
+```
+
+4. Collect GPU utilization and memory for the new model:
+
+Start sampling in a separate shell before benchmarking or evaluation:
+
+```bash
+bash scripts/sample_gpu_memory.sh "runs/${RUN_NAME}_gpu_metrics.csv" 1
+```
+
+After stopping the sampler with `Ctrl-C`, summarize the peak values:
+
+```bash
+awk -F, 'NR>1 {if ($4>max_mem) max_mem=$4; if ($6>max_util) max_util=$6} END {print "peak_memory_mb=" max_mem ", peak_utilization_pct=" max_util}' "runs/${RUN_NAME}_gpu_metrics.csv"
+```
+
+5. Dump HumanEval examples for the new model:
+
+```bash
+python scripts/dump_humaneval_samples.py \
+  --base-url http://127.0.0.1:8000/v1 \
+  --api-key local-dev \
+  --model "${SERVED_MODEL_NAME}" \
+  --max-samples 10 \
+  --output "runs/humaneval_${RUN_NAME}_samples.json"
+```
+
 ## Inference Evaluation Workflow
 
 To collect both quality and serving metrics, do the following for the `base model` and then repeat for the `tuned model`.
