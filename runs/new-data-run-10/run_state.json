@@ -1,0 +1,14 @@
+{
+  "avg_tokens_per_sec": 7078.21109059828,
+  "exported_model_dir": "runs/new-data-run-10/final",
+  "final_val_loss": 0.8358082335219943,
+  "finished_at": "2026-04-07T18:37:16+00:00",
+  "model": "Qwen/Qwen2.5-1.5B-Instruct",
+  "optimizer_steps": 23,
+  "peak_gpu_memory_gb": 20.0384,
+  "resume_from_checkpoint": null,
+  "run_name": "new-data-run-10",
+  "started_at": "2026-04-07T18:33:54+00:00",
+  "status": "completed",
+  "summary_path": "runs/new-data-run-10/summary.json"
+}

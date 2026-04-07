@@ -1,0 +1,12 @@
+{
+  "available": true,
+  "branch": "main",
+  "captured_at": "2026-04-07T18:33:54+00:00",
+  "command": "scripts/train_full_sft.py --config configs/experiment.yaml --run-name new-data-run-10",
+  "commit": "2cdeb9a6fae4f618045a7320a74182119d763ffb",
+  "is_dirty": true,
+  "repo_root": "/workspace/LLM-infra",
+  "status_short": [
+    "?? runs/new-data-run-10/"
+  ]
+}
