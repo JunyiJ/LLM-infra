@@ -18,6 +18,7 @@ from tqdm import tqdm
 
 from llm_infra_lab.apps import row_prompt
 from llm_infra_lab.manifest import load_yaml, sha256_file, utc_now, write_json, write_yaml
+from llm_infra_lab.prompting import PROMPT_STYLE_CHATML
 from transformers import AutoTokenizer, AutoModelForCausalLM, get_linear_schedule_with_warmup
 
 def _mps_available() -> bool:
@@ -365,6 +366,7 @@ def evaluate_loss(
     batch_size: int,
     device: torch.device,
     max_length: int | None,
+    prompt_style: str,
 ) -> float | None:
     if not dataset:
         return None
@@ -375,7 +377,7 @@ def evaluate_loss(
     with torch.no_grad():
         for start_idx in range(0, len(dataset), batch_size):
             batch = dataset[start_idx : start_idx + batch_size]
-            prompts = [row_prompt(record) for record in batch]
+            prompts = [row_prompt(record, prompt_style=prompt_style) for record in batch]
             completions = [record["completion"] for record in batch]
             input_ids, attention_mask, labels = get_tokens_masks_labels(
                 prompts,
@@ -462,6 +464,7 @@ def main() -> None:
     train_dataset = _load_jsonl(train_path)
     val_dataset = _load_jsonl(val_path)
     data_max_length = data_cfg.get("max_length", 2048)
+    prompt_style = data_cfg.get("prompt_style", PROMPT_STYLE_CHATML)
 
     train_config = cfg["train"]
     if train_config.get("gradient_checkpointing", False):
@@ -539,7 +542,7 @@ def main() -> None:
         for start_idx in pbar:
             batch_indices = shuffled_indices[start_idx : start_idx + train_batch_size]
             batch = [train_dataset[index] for index in batch_indices]
-            prompts = [row_prompt(record) for record in batch]
+            prompts = [row_prompt(record, prompt_style=prompt_style) for record in batch]
             completions = [record["completion"] for record in batch]
             response_ids, response_attn_mask, labels = get_tokens_masks_labels(
                 prompts,
@@ -624,6 +627,7 @@ def main() -> None:
                             batch_size=eval_batch_size,
                             device=DEVICE,
                             max_length=data_max_length,
+                            prompt_style=prompt_style,
                         )
                         eval_record = {
                             "epoch": epoch,
@@ -694,6 +698,7 @@ def main() -> None:
         batch_size=eval_batch_size,
         device=DEVICE,
         max_length=data_max_length,
+        prompt_style=prompt_style,
     )
     if final_val_loss is not None:
         eval_history.append(
@@ -737,6 +742,7 @@ def main() -> None:
         {
             **run_table_row,
             "model": cfg["model"]["name_or_path"],
+            "prompt_style": prompt_style,
             "gpu_hourly_cost_usd": gpu_hourly_cost,
             "avg_step_time_sec": round(avg_step_time_sec, 4) if avg_step_time_sec is not None else None,
             "latest_checkpoint": latest_checkpoint,
@@ -749,6 +755,7 @@ def main() -> None:
         "started_at": started_at,
         "finished_at": utc_now(),
         "model": cfg["model"]["name_or_path"],
+        "prompt_style": prompt_style,
         "train_rows": len(train_dataset),
         "val_rows": len(val_dataset),
         "num_train_epochs": num_train_epochs,
@@ -790,6 +797,7 @@ def main() -> None:
             "finished_at": summary["finished_at"],
             "run_name": args.run_name,
             "model": cfg["model"]["name_or_path"],
+            "prompt_style": prompt_style,
             "resume_from_checkpoint": args.resume_from_checkpoint,
             "status": "completed",
             "optimizer_steps": global_step,

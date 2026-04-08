@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from llm_infra_lab.prompting import render_apps_prompt
+from llm_infra_lab.prompting import PROMPT_STYLE_CHATML, render_apps_prompt
 
 
 @dataclass(slots=True)
@@ -39,20 +39,20 @@ class AppsRecord:
         return hashlib.sha256(payload).hexdigest()
 
 
-def row_prompt(row: dict) -> str:
+def row_prompt(row: dict, *, prompt_style: str = PROMPT_STYLE_CHATML) -> str:
     prompt = row.get("prompt")
     if isinstance(prompt, str) and prompt:
         return prompt
     question = (row.get("question") or "").strip()
     starter_code = (row.get("starter_code") or "").strip() or None
-    return render_apps_prompt(question, starter_code)
+    return render_apps_prompt(question, starter_code, prompt_style=prompt_style)
 
 
-def row_text(row: dict) -> str:
+def row_text(row: dict, *, prompt_style: str = PROMPT_STYLE_CHATML) -> str:
     text = row.get("text")
     if isinstance(text, str) and text:
         return text
-    return f"{row_prompt(row)}{row['completion']}"
+    return f"{row_prompt(row, prompt_style=prompt_style)}{row['completion']}"
 
 
 def is_valid_python(code: str) -> bool:

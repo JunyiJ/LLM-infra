@@ -7,6 +7,7 @@ from pathlib import Path
 
 from llm_infra_lab.apps import row_prompt
 from llm_infra_lab.manifest import load_yaml
+from llm_infra_lab.prompting import PROMPT_STYLE_CHATML
 from transformers import AutoTokenizer
 
 
@@ -36,6 +37,11 @@ def resolve_model_name(config_path: str, model_name: str | None) -> str:
     return cfg["model"]["name_or_path"]
 
 
+def resolve_prompt_style(config_path: str) -> str:
+    cfg = load_yaml(config_path)
+    return cfg.get("data", {}).get("prompt_style", PROMPT_STYLE_CHATML)
+
+
 def load_rows(path: Path, max_samples: int | None) -> list[dict]:
     rows: list[dict] = []
     with open(path, "r", encoding="utf-8") as handle:
@@ -50,6 +56,7 @@ def main() -> None:
     args = parse_args()
     train_path = resolve_train_path(args.config, args.data_path)
     model_name = resolve_model_name(args.config, args.model_name)
+    prompt_style = resolve_prompt_style(args.config)
     rows = load_rows(train_path, args.max_samples)
 
     tokenizer = AutoTokenizer.from_pretrained(model_name)
@@ -59,7 +66,7 @@ def main() -> None:
     total = 0
 
     for row in rows:
-        prompt = row_prompt(row)
+        prompt = row_prompt(row, prompt_style=prompt_style)
         completion = row["completion"]
         full_text = prompt + completion
 
@@ -93,6 +100,7 @@ def main() -> None:
 
     print(f"train_path: {train_path}")
     print(f"model_name: {model_name}")
+    print(f"prompt_style: {prompt_style}")
     print(f"total_samples: {total}")
     print(f"mismatch_samples: {mismatch_count}")
     print(f"mismatch_rate: {mismatch_rate:.6f}")

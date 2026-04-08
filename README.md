@@ -328,6 +328,19 @@ Each training row should be converted into:
 
 The trainer renders the prompt from those raw fields at runtime. The prompt should ask for `code only` output. This keeps the training target aligned with functional code benchmarks.
 
+Prompt rendering is controlled by `data.prompt_style` in the config:
+
+- `plain`: wrapper-free prompt text for raw completion-style ablations
+- `code_prefix`: Python comment block plus optional starter code, ending at the code boundary
+- `signature_docstring`: starter signature plus a HumanEval-like docstring when a `def` scaffold exists
+- `auto_benchmark_like`: `signature_docstring` for top-level `def` starters, otherwise `code_prefix`
+- `chatml`: legacy ChatML system/user/assistant formatting
+
+Use `plain` when you want the training prefix to be closer to raw code-completion evaluation such as HumanEval served through the completions API.
+Use `code_prefix` when you want the prefix itself to look like code context instead of an instruction wrapper.
+Use `signature_docstring` when you want callable tasks with starter signatures to resemble function-completion benchmarks more closely.
+Use `auto_benchmark_like` when your dataset mixes callable and non-callable tasks and you want the renderer to choose the more benchmark-like format per row.
+
 ## What you should implement yourself
 
 This repo leaves these surfaces intentionally incomplete:

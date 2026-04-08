@@ -11,6 +11,7 @@ data:
   train_path: data/apps/train.jsonl
   val_path: data/apps/val.jsonl
   max_length: 256
+  prompt_style: auto_benchmark_like
 
 train:
   output_root: runs
