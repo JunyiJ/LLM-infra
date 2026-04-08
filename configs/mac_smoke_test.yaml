@@ -8,10 +8,20 @@ model:
   trust_remote_code: false
 
 data:
+  variant: apps_default
   train_path: data/apps/train.jsonl
   val_path: data/apps/val.jsonl
   max_length: 256
   prompt_style: auto_benchmark_like
+  variants:
+    apps_default:
+      train_path: data/apps/train.jsonl
+      val_path: data/apps/val.jsonl
+      prompt_style: auto_benchmark_like
+    apps_function_only:
+      train_path: data/apps_function_only/train.jsonl
+      val_path: data/apps_function_only/val.jsonl
+      prompt_style: signature_docstring
 
 train:
   output_root: runs

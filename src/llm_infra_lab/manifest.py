@@ -13,6 +13,24 @@ def load_yaml(path: str | Path) -> dict:
         return yaml.safe_load(handle)
 
 
+def resolve_data_config(cfg: dict) -> dict:
+    data_cfg = dict(cfg["data"])
+    variant_name = data_cfg.get("variant")
+    variants = data_cfg.get("variants")
+    if not variant_name or not isinstance(variants, dict):
+        return data_cfg
+
+    variant_cfg = variants.get(variant_name)
+    if not isinstance(variant_cfg, dict):
+        available = ", ".join(sorted(str(key) for key in variants))
+        raise KeyError(f"Unknown data.variant={variant_name!r}. Available variants: {available}")
+
+    merged = {**data_cfg, **variant_cfg}
+    merged["variant"] = variant_name
+    merged["selected_variant"] = variant_name
+    return merged
+
+
 def sha256_file(path: str | Path) -> str:
     hasher = hashlib.sha256()
     with open(path, "rb") as handle:

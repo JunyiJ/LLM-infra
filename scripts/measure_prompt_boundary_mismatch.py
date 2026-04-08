@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 
 from llm_infra_lab.apps import row_prompt
-from llm_infra_lab.manifest import load_yaml
+from llm_infra_lab.manifest import resolve_data_config, load_yaml
 from llm_infra_lab.prompting import PROMPT_STYLE_CHATML
 from transformers import AutoTokenizer
 
@@ -27,7 +27,8 @@ def resolve_train_path(config_path: str, data_path: str | None) -> Path:
 
     cfg = load_yaml(config_path)
     config_dir = Path(config_path).resolve().parent
-    return (config_dir.parent / cfg["data"]["train_path"]).resolve()
+    data_cfg = resolve_data_config(cfg)
+    return (config_dir.parent / data_cfg["train_path"]).resolve()
 
 
 def resolve_model_name(config_path: str, model_name: str | None) -> str:
@@ -39,7 +40,8 @@ def resolve_model_name(config_path: str, model_name: str | None) -> str:
 
 def resolve_prompt_style(config_path: str) -> str:
     cfg = load_yaml(config_path)
-    return cfg.get("data", {}).get("prompt_style", PROMPT_STYLE_CHATML)
+    data_cfg = resolve_data_config(cfg)
+    return data_cfg.get("prompt_style", PROMPT_STYLE_CHATML)
 
 
 def load_rows(path: Path, max_samples: int | None) -> list[dict]:

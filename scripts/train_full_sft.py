@@ -17,7 +17,7 @@ import torch
 from tqdm import tqdm
 
 from llm_infra_lab.apps import row_prompt
-from llm_infra_lab.manifest import load_yaml, sha256_file, utc_now, write_json, write_yaml
+from llm_infra_lab.manifest import resolve_data_config, load_yaml, sha256_file, utc_now, write_json, write_yaml
 from llm_infra_lab.prompting import PROMPT_STYLE_CHATML
 from transformers import AutoTokenizer, AutoModelForCausalLM, get_linear_schedule_with_warmup
 
@@ -431,7 +431,7 @@ def main() -> None:
         env_cost = os.environ.get("GPU_HOURLY_COST_USD")
         gpu_hourly_cost = float(env_cost) if env_cost else None
     gpu_name = cfg.get("infra", {}).get("gpu_name") or _gpu_name()
-    data_cfg = cfg["data"]
+    data_cfg = resolve_data_config(cfg)
     train_path = (config_dir.resolve().parent / data_cfg["train_path"]).resolve()
     val_path = (config_dir.resolve().parent / data_cfg["val_path"]).resolve()
 

@@ -1,21 +1,22 @@
 {
   "dataset_name": "codeparrot/apps",
-  "train_rows": 1423,
+  "train_rows": 1724,
   "val_rows": 300,
   "difficulty": [
+    "competition",
     "interview"
   ],
   "train_skips": {
-    "difficulty_filtered": 2635,
+    "difficulty_filtered": 2333,
     "extra_top_level_functions": 58,
     "missing_target_fn": 57,
-    "no_passing_solution": 786,
+    "no_passing_solution": 787,
     "test_or_main_function": 34,
     "too_long": 1,
     "variant_function_names": 6
   },
   "val_skips": {
-    "no_passing_solution": 19,
+    "no_passing_solution": 20,
     "test_or_main_function": 1
   },
   "next_steps": [

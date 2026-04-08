@@ -122,8 +122,42 @@ python scripts/prepare_apps.py \
   --difficulty interview,competition
 ```
 
+Prepare an alternate variant in a separate directory by changing `--output-dir`. For example, a stricter function-only ablation:
+
+```bash
+python scripts/prepare_apps.py \
+  --dataset-name codeparrot/apps \
+  --output-dir data/apps_function_only \
+  --max-train-samples 3000 \
+  --max-val-samples 300 \
+  --difficulty interview,competition \
+  --task-format function_only
+```
+
 Prepared APPS rows now store raw task fields and render prompts at training time. If you already have older jsonl files with baked-in prompts, they still work, but new prompt changes only require rerunning training, not regenerating the dataset.
 The preparation step now also filters for cleaner completions by preferring passing solutions without `__main__` harnesses, `main`/`test_*` helper functions, markdown fences, repeated variant function names like `_2`, or extra top-level functions for call-based tasks. Check `data/apps/summary.json` after generation to see how many rows were skipped for each reason.
+
+## Data Variants
+
+Training configs can select a named dataset variant under `data.variant`. The active scripts resolve the selected variant's `train_path`, `val_path`, and optional prompt settings from `data.variants`.
+
+Example:
+
+```yaml
+data:
+  variant: apps_default
+  variants:
+    apps_default:
+      train_path: data/apps/train.jsonl
+      val_path: data/apps/val.jsonl
+      prompt_style: auto_benchmark_like
+    apps_function_only:
+      train_path: data/apps_function_only/train.jsonl
+      val_path: data/apps_function_only/val.jsonl
+      prompt_style: signature_docstring
+```
+
+To switch SFT input data, change only `data.variant`.
 
 Generate a manifest:
 
