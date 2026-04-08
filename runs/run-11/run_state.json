@@ -1,0 +1,15 @@
+{
+  "avg_tokens_per_sec": 5421.644792194283,
+  "exported_model_dir": "runs/run-11/final",
+  "final_val_loss": 0.829645889339238,
+  "finished_at": "2026-04-08T05:38:23+00:00",
+  "model": "Qwen/Qwen2.5-1.5B-Instruct",
+  "optimizer_steps": 27,
+  "peak_gpu_memory_gb": 20.0492,
+  "prompt_style": "auto_benchmark_like",
+  "resume_from_checkpoint": null,
+  "run_name": "run-11",
+  "started_at": "2026-04-08T05:33:28+00:00",
+  "status": "completed",
+  "summary_path": "runs/run-11/summary.json"
+}

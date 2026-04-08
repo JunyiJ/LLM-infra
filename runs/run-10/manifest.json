@@ -1,0 +1,91 @@
+{
+  "command": [
+    "scripts/train_full_sft.py",
+    "--config",
+    "configs/experiment.yaml",
+    "--run-name",
+    "run-10"
+  ],
+  "config": {
+    "data": {
+      "max_length": 2048,
+      "prompt_style": "auto_benchmark_like",
+      "train_path": "data/apps/train.jsonl",
+      "val_path": "data/apps/val.jsonl"
+    },
+    "eval": {
+      "benchmark": "humaneval",
+      "max_tokens": 1024,
+      "temperature": 0.0
+    },
+    "infra": {
+      "gpu_hourly_cost_usd": 0.77,
+      "gpu_name": null
+    },
+    "model": {
+      "name_or_path": "Qwen/Qwen2.5-1.5B-Instruct",
+      "torch_dtype": "bfloat16",
+      "trust_remote_code": false
+    },
+    "project": {
+      "name": "llm-infra-lab",
+      "owner": "junyi"
+    },
+    "serving": {
+      "gpu_memory_utilization": 0.9,
+      "max_model_len": 4096,
+      "port": 8000
+    },
+    "train": {
+      "bf16": true,
+      "eval_steps": 20,
+      "fp16": false,
+      "gradient_accumulation_steps": 32,
+      "gradient_checkpointing": true,
+      "learning_rate": 5e-6,
+      "logging_steps": 10,
+      "num_train_epochs": 1,
+      "output_root": "runs",
+      "per_device_eval_batch_size": 2,
+      "per_device_train_batch_size": 2,
+      "report_to": "none",
+      "save_steps": 20,
+      "save_total_limit": 1,
+      "seed": 42,
+      "warmup_ratio": 0.03,
+      "weight_decay": 0.01
+    }
+  },
+  "config_path": "/workspace/LLM-infra/configs/experiment.yaml",
+  "config_sha256": "ef72f77a1712a3c1eb978ecad2cca196f953a2dde678649e049670b75cb61c3b",
+  "created_at": "2026-04-08T03:14:33+00:00",
+  "data": {
+    "train_path": "/workspace/LLM-infra/data/apps/train.jsonl",
+    "train_sha256": "5678248b0136bb127522ba6cea68b7f087c31de12859354af28e6245a667d03c",
+    "val_path": "/workspace/LLM-infra/data/apps/val.jsonl",
+    "val_sha256": "8fa937d23150340e495d7a29faf6c6c742049f26c56f625050c75bd705048558"
+  },
+  "environment": {
+    "device": "cuda",
+    "gpu_hourly_cost_usd": 0.77,
+    "gpu_name": "NVIDIA RTX 6000 Ada Generation",
+    "python": "3.11.10 (main, Sep  7 2024, 18:35:41) [GCC 11.4.0]",
+    "torch": "2.10.0+cu128"
+  },
+  "git": {
+    "available": true,
+    "branch": "main",
+    "captured_at": "2026-04-08T03:14:33+00:00",
+    "command": "scripts/train_full_sft.py --config configs/experiment.yaml --run-name run-10",
+    "commit": "7c354ec4675f921cca4ebf94d88dc3d6e33c02fd",
+    "is_dirty": true,
+    "repo_root": "/workspace/LLM-infra",
+    "status_short": [
+      "?? runs/run-10/"
+    ]
+  },
+  "model": "Qwen/Qwen2.5-1.5B-Instruct",
+  "project": "llm-infra-lab",
+  "resume_from_checkpoint": null,
+  "run_name": "run-10"
+}

@@ -1,0 +1,2 @@
+{"checkpoint_dir":"runs/run-11/checkpoints/checkpoint-00000020","checkpoint_size_bytes":9262725709,"checkpoint_size_gb":8.6266,"global_step":20,"reason":"mid_epoch","resume_epoch":0,"saved_at":"2026-04-08T05:36:36+00:00","write_time_sec":15.8627}
+{"checkpoint_dir":"runs/run-11/checkpoints/checkpoint-00000027","checkpoint_size_bytes":9262725709,"checkpoint_size_gb":8.6266,"global_step":27,"reason":"epoch_end","resume_epoch":1,"saved_at":"2026-04-08T05:37:53+00:00","write_time_sec":14.4012}
