@@ -24,6 +24,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--difficulty", default="interview,competition")
     parser.add_argument("--max-train-samples", type=int, default=3000)
     parser.add_argument("--max-val-samples", type=int, default=300)
+    parser.add_argument(
+        "--task-format",
+        choices=["all", "function_only"],
+        default="all",
+        help="Filter rows by task shape after solution cleaning.",
+    )
     return parser.parse_args()
 
 
@@ -88,6 +94,14 @@ def build_stub_record(row: dict, *, skip_counter: Counter[str] | None = None) ->
     }
 
 
+def is_function_only_record(record: dict) -> bool:
+    starter_code = (record.get("starter_code") or "").strip()
+    if not starter_code:
+        return False
+    first_nonempty_line = next((line for line in starter_code.splitlines() if line.strip()), "")
+    return first_nonempty_line.startswith("def ") or first_nonempty_line.startswith("async def ")
+
+
 def write_split(rows: list[dict], path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "wb") as handle:
@@ -101,6 +115,7 @@ def build_split(
     allowed_difficulties: set[str],
     max_samples: int,
     *,
+    task_format: str,
     skip_counter: Counter[str] | None = None,
 ) -> list[dict]:
     output: list[dict] = []
@@ -111,6 +126,10 @@ def build_split(
         if allowed_difficulties and record["difficulty"] not in allowed_difficulties:
             if skip_counter is not None:
                 skip_counter["difficulty_filtered"] += 1
+            continue
+        if task_format == "function_only" and not is_function_only_record(record):
+            if skip_counter is not None:
+                skip_counter["task_format_filtered"] += 1
             continue
         output.append(record)
         if len(output) >= max_samples:
@@ -128,6 +147,7 @@ def main() -> None:
         dataset["train"],
         allowed_difficulties,
         args.max_train_samples,
+        task_format=args.task_format,
         skip_counter=train_skips,
     )
     val_source = dataset["test"] if "test" in dataset else dataset["train"]
@@ -135,6 +155,7 @@ def main() -> None:
         val_source,
         allowed_difficulties,
         args.max_val_samples,
+        task_format=args.task_format,
         skip_counter=val_skips,
     )
 
@@ -147,6 +168,7 @@ def main() -> None:
         "train_rows": len(train_rows),
         "val_rows": len(val_rows),
         "difficulty": sorted(allowed_difficulties),
+        "task_format": args.task_format,
         "train_skips": dict(sorted(train_skips.items())),
         "val_skips": dict(sorted(val_skips.items())),
         "next_steps": [

@@ -314,27 +314,39 @@ def get_tokens_masks_labels(prompts, completions, tokenizer, device, max_length=
     pad_token_id = tokenizer.pad_token_id
     if pad_token_id is None:
         pad_token_id = tokenizer.eos_token_id
+    if not getattr(tokenizer, "is_fast", False):
+        raise ValueError("get_tokens_masks_labels requires a fast tokenizer for offset mappings.")
 
-    prompt_encodings = tokenizer(prompts, add_special_tokens=False)
-    completion_encodings = tokenizer(completions, add_special_tokens=False)
+    full_texts = [f"{prompt}{completion}" for prompt, completion in zip(prompts, completions)]
+    full_encodings = tokenizer(
+        full_texts,
+        add_special_tokens=False,
+        return_offsets_mapping=True,
+        truncation=max_length is not None,
+        max_length=max_length,
+    )
 
     input_id_rows: list[list[int]] = []
     attention_mask_rows: list[list[int]] = []
     label_rows: list[list[int]] = []
 
-    for prompt_ids, completion_ids in zip(
-        prompt_encodings["input_ids"],
-        completion_encodings["input_ids"],
+    for prompt, input_ids, offset_mapping in zip(
+        prompts,
+        full_encodings["input_ids"],
+        full_encodings["offset_mapping"],
     ):
-        input_ids = prompt_ids + completion_ids
-        if max_length is not None:
-            input_ids = input_ids[:max_length]
-
-        effective_prompt_len = min(len(prompt_ids), len(input_ids))
+        prompt_char_len = len(prompt)
+        labels = []
+        for token_id, (start_char, _end_char) in zip(input_ids, offset_mapping):
+            if start_char >= prompt_char_len:
+                labels.append(token_id)
+            else:
+                # If a token straddles the prompt/completion boundary, mask it out.
+                labels.append(-100)
 
         input_id_rows.append(input_ids)
         attention_mask_rows.append([1] * len(input_ids))
-        label_rows.append([-100] * effective_prompt_len + completion_ids[:len(input_ids) - effective_prompt_len])
+        label_rows.append(labels)
 
     max_seq_len = max(len(row) for row in input_id_rows)
 
