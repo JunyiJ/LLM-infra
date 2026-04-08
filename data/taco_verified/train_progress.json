@@ -1,0 +1,15 @@
+{
+  "rows_scanned": 182,
+  "rows_written": 50,
+  "skip_counts": {
+    "difficulty_filtered": 38,
+    "extra_top_level_functions": 1,
+    "missing_required_fields": 37,
+    "no_passing_solution": 53,
+    "test_or_main_function": 3
+  },
+  "split": "train",
+  "stopped_early": false,
+  "target_rows": 100,
+  "updated_at": "2026-04-08T12:03:12-0700"
+}

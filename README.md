@@ -142,7 +142,25 @@ python scripts/prepare_taco.py \
   --output-dir data/taco_verified \
   --max-train-samples 5000 \
   --max-val-samples 500 \
-  --difficulty easy,medium,hard
+  --difficulty easy,medium,hard \
+  --max-candidate-solutions 16 \
+  --progress-every 100 \
+  --write-every 100
+```
+
+For the first TACO run, start smaller and bounded so you can observe throughput:
+
+```bash
+python scripts/prepare_taco.py \
+  --dataset-name BAAI/TACO \
+  --output-dir data/taco_verified \
+  --max-train-samples 200 \
+  --max-val-samples 50 \
+  --difficulty easy,medium,hard \
+  --max-candidate-solutions 8 \
+  --progress-every 50 \
+  --write-every 50 \
+  --max-runtime-minutes 30
 ```
 
 Create a mixed prepared dataset with configurable counts per source:
