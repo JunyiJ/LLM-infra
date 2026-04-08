@@ -84,10 +84,17 @@ def main() -> None:
         train_path = source_dir / "train.jsonl"
         val_path = source_dir / "val.jsonl"
         train_rows = load_jsonl(train_path)
-        val_rows = load_jsonl(val_path)
+        val_rows: list[dict] = []
+        if spec["val_count"] > 0:
+            if not val_path.exists():
+                raise FileNotFoundError(
+                    f"Requested {spec['val_count']} validation rows from {source_dir}, "
+                    f"but {val_path} does not exist"
+                )
+            val_rows = load_jsonl(val_path)
 
         sampled_train = sample_rows(train_rows, spec["train_count"], rng=rng)
-        sampled_val = sample_rows(val_rows, spec["val_count"], rng=rng)
+        sampled_val = sample_rows(val_rows, spec["val_count"], rng=rng) if spec["val_count"] > 0 else []
 
         mixed_train_rows.extend(sampled_train)
         mixed_val_rows.extend(sampled_val)
@@ -98,7 +105,7 @@ def main() -> None:
                 "train_path": str(train_path),
                 "val_path": str(val_path),
                 "train_path_sha256": sha256_file(train_path),
-                "val_path_sha256": sha256_file(val_path),
+                "val_path_sha256": sha256_file(val_path) if val_path.exists() else None,
                 "available_train_rows": len(train_rows),
                 "available_val_rows": len(val_rows),
                 "sampled_train_rows": len(sampled_train),

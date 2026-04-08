@@ -1,15 +1,19 @@
 {
-  "rows_scanned": 182,
-  "rows_written": 50,
+  "rows_scanned": 4484,
+  "rows_written": 1500,
   "skip_counts": {
-    "difficulty_filtered": 38,
-    "extra_top_level_functions": 1,
-    "missing_required_fields": 37,
-    "no_passing_solution": 53,
-    "test_or_main_function": 3
+    "difficulty_filtered": 808,
+    "extra_top_level_functions": 11,
+    "missing_required_fields": 1019,
+    "missing_target_fn": 4,
+    "no_passing_solution": 1103,
+    "test_harness_patterns": 2,
+    "test_or_main_function": 34,
+    "too_long": 2,
+    "variant_function_names": 1
   },
   "split": "train",
   "stopped_early": false,
-  "target_rows": 100,
-  "updated_at": "2026-04-08T12:03:12-0700"
+  "target_rows": 2000,
+  "updated_at": "2026-04-08T16:28:56-0700"
 }

@@ -8,7 +8,7 @@ model:
   trust_remote_code: false
 
 data:
-  variant: apps_default
+  variant: apps_taco_mix
   train_path: data/apps/train.jsonl
   val_path: data/apps/val.jsonl
   max_length: 2048

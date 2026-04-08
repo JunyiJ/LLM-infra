@@ -1,0 +1,32 @@
+{
+  "output_dir": "/Users/junyi/Projects/LLM-infra/data/apps_taco_mix",
+  "seed": 42,
+  "sources": [
+    {
+      "available_train_rows": 1724,
+      "available_val_rows": 300,
+      "name": "apps",
+      "sampled_train_rows": 1400,
+      "sampled_val_rows": 300,
+      "source_dir": "/Users/junyi/Projects/LLM-infra/data/apps",
+      "train_path": "/Users/junyi/Projects/LLM-infra/data/apps/train.jsonl",
+      "train_path_sha256": "80526c210fb84d5d351ec777342a8dfaff0d82126fa5fbde29699c6f75039e87",
+      "val_path": "/Users/junyi/Projects/LLM-infra/data/apps/val.jsonl",
+      "val_path_sha256": "0b600eafa219361ed181c42bb81e82138138947d9ec949488d4e2e3266cb2b28"
+    },
+    {
+      "available_train_rows": 1450,
+      "available_val_rows": 0,
+      "name": "taco",
+      "sampled_train_rows": 1400,
+      "sampled_val_rows": 0,
+      "source_dir": "/Users/junyi/Projects/LLM-infra/data/taco_verified",
+      "train_path": "/Users/junyi/Projects/LLM-infra/data/taco_verified/train.jsonl",
+      "train_path_sha256": "960e54cf61c3e12e04878e0e2707fcd52b0c113e70a6399c4ab97eb944a77a9b",
+      "val_path": "/Users/junyi/Projects/LLM-infra/data/taco_verified/val.jsonl",
+      "val_path_sha256": null
+    }
+  ],
+  "train_rows": 2800,
+  "val_rows": 300
+}
