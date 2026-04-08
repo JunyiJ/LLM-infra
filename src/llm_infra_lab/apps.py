@@ -71,6 +71,62 @@ def top_level_function_names(code: str) -> list[str]:
     return [node.name for node in tree.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))]
 
 
+def top_level_class_names(code: str) -> list[str]:
+    try:
+        tree = ast.parse(code)
+    except SyntaxError:
+        return []
+    return [node.name for node in tree.body if isinstance(node, ast.ClassDef)]
+
+
+def top_level_assert_count(code: str) -> int:
+    try:
+        tree = ast.parse(code)
+    except SyntaxError:
+        return 0
+    return sum(1 for node in tree.body if isinstance(node, ast.Assert))
+
+
+def imported_module_names(code: str) -> set[str]:
+    try:
+        tree = ast.parse(code)
+    except SyntaxError:
+        return set()
+    imported: set[str] = set()
+    for node in tree.body:
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                imported.add(alias.name.split(".", 1)[0])
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            imported.add(node.module.split(".", 1)[0])
+    return imported
+
+
+def top_level_called_names(code: str) -> list[str]:
+    try:
+        tree = ast.parse(code)
+    except SyntaxError:
+        return []
+
+    called_names: list[str] = []
+    for node in tree.body:
+        if not isinstance(node, ast.Expr) or not isinstance(node.value, ast.Call):
+            continue
+        func = node.value.func
+        if isinstance(func, ast.Name):
+            called_names.append(func.id)
+        elif isinstance(func, ast.Attribute):
+            parts = [func.attr]
+            value = func.value
+            while isinstance(value, ast.Attribute):
+                parts.append(value.attr)
+                value = value.value
+            if isinstance(value, ast.Name):
+                parts.append(value.id)
+                called_names.append(".".join(reversed(parts)))
+    return called_names
+
+
 def has_main_block(code: str) -> bool:
     try:
         tree = ast.parse(code)
@@ -126,16 +182,34 @@ def strip_main_block(code: str) -> str:
 
 def completion_quality_stats(code: str) -> dict[str, Any]:
     function_names = top_level_function_names(code)
+    class_names = top_level_class_names(code)
     stripped_lines = [line for line in code.splitlines() if line.strip()]
     variant_function_names = [name for name in function_names if re.search(r"_\d+$", name)]
     test_like_function_names = [
         name for name in function_names if name == "main" or name.startswith("test_") or name.startswith("check_")
     ]
+    top_level_call_names = top_level_called_names(code)
+    imported_modules = imported_module_names(code)
+    top_level_test_calls = [
+        name
+        for name in top_level_call_names
+        if name.startswith("test_")
+        or name.startswith("check_")
+        or name in {"pytest.main", "unittest.main", "doctest.testmod"}
+    ]
+    test_framework_imports = sorted(imported_modules & {"pytest", "unittest", "doctest"})
+    test_like_class_names = [name for name in class_names if name.startswith("Test") or name.endswith("TestCase")]
     return {
         "top_level_function_names": function_names,
         "top_level_function_count": len(function_names),
+        "top_level_class_names": class_names,
         "variant_function_names": variant_function_names,
         "test_like_function_names": test_like_function_names,
+        "top_level_call_names": top_level_call_names,
+        "top_level_test_calls": top_level_test_calls,
+        "top_level_assert_count": top_level_assert_count(code),
+        "test_framework_imports": test_framework_imports,
+        "test_like_class_names": test_like_class_names,
         "has_main_block": has_main_block(code),
         "has_doctest": "doctest" in code,
         "has_code_fence": "```" in code,
@@ -160,6 +234,10 @@ def completion_quality_score(
     if stats["has_code_fence"]:
         score += 10.0
     score += len(stats["test_like_function_names"]) * 12.0
+    score += len(stats["top_level_test_calls"]) * 12.0
+    score += min(stats["top_level_assert_count"], 8) * 4.0
+    score += len(stats["test_framework_imports"]) * 8.0
+    score += len(stats["test_like_class_names"]) * 10.0
     score += len(stats["variant_function_names"]) * 10.0
     if target_fn_name is not None:
         fn_names = stats["top_level_function_names"]
@@ -184,6 +262,10 @@ def is_completion_acceptable(
         return False, "code_fence"
     if stats["test_like_function_names"]:
         return False, "test_or_main_function"
+    if stats["top_level_test_calls"] or stats["top_level_assert_count"] or stats["test_framework_imports"]:
+        return False, "test_harness_patterns"
+    if stats["test_like_class_names"]:
+        return False, "test_harness_patterns"
     if stats["variant_function_names"]:
         return False, "variant_function_names"
     if target_fn_name is not None:

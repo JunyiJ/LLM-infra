@@ -134,8 +134,30 @@ python scripts/prepare_apps.py \
   --task-format function_only
 ```
 
+Prepare a verified TACO variant:
+
+```bash
+python scripts/prepare_taco.py \
+  --dataset-name BAAI/TACO \
+  --output-dir data/taco_verified \
+  --max-train-samples 5000 \
+  --max-val-samples 500 \
+  --difficulty easy,medium,hard
+```
+
+Create a mixed prepared dataset with configurable counts per source:
+
+```bash
+python scripts/mix_prepared_datasets.py \
+  --output-dir data/apps_taco_mix \
+  --mix apps=data/apps:1000:100 \
+  --mix taco=data/taco_verified:2000:200
+```
+
+The output directory name stays stable. The requested counts live in `summary.json`, not in the dataset variant name.
+
 Prepared APPS rows now store raw task fields and render prompts at training time. If you already have older jsonl files with baked-in prompts, they still work, but new prompt changes only require rerunning training, not regenerating the dataset.
-The preparation step now also filters for cleaner completions by preferring passing solutions without `__main__` harnesses, `main`/`test_*` helper functions, markdown fences, repeated variant function names like `_2`, or extra top-level functions for call-based tasks. Check `data/apps/summary.json` after generation to see how many rows were skipped for each reason.
+The preparation step now also filters for cleaner completions by preferring passing solutions without `__main__` harnesses, `main`/`test_*` helper functions, top-level test calls, top-level `assert` blocks, `pytest`/`unittest` harness imports, markdown fences, repeated variant function names like `_2`, or extra top-level functions for call-based tasks. Check `data/apps/summary.json` after generation to see how many rows were skipped for each reason.
 
 ## Data Variants
 
@@ -155,9 +177,24 @@ data:
       train_path: data/apps_function_only/train.jsonl
       val_path: data/apps_function_only/val.jsonl
       prompt_style: signature_docstring
+    taco_verified:
+      train_path: data/taco_verified/train.jsonl
+      val_path: data/taco_verified/val.jsonl
+      prompt_style: auto_benchmark_like
+    apps_taco_mix:
+      train_path: data/apps_taco_mix/train.jsonl
+      val_path: data/apps_taco_mix/val.jsonl
+      prompt_style: auto_benchmark_like
 ```
 
 To switch SFT input data, change only `data.variant`.
+
+Recommended first comparisons:
+
+1. `apps_default`
+2. `taco_verified`
+3. `apps_taco_mix`
+4. compare all three at the same learning rate and prompt style
 
 Generate a manifest:
 

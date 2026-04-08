@@ -22,6 +22,18 @@ data:
       train_path: data/apps_function_only/train.jsonl
       val_path: data/apps_function_only/val.jsonl
       prompt_style: signature_docstring
+    taco_verified:
+      train_path: data/taco_verified/train.jsonl
+      val_path: data/taco_verified/val.jsonl
+      prompt_style: auto_benchmark_like
+    taco_function_only:
+      train_path: data/taco_function_only/train.jsonl
+      val_path: data/taco_function_only/val.jsonl
+      prompt_style: signature_docstring
+    apps_taco_mix:
+      train_path: data/apps_taco_mix/train.jsonl
+      val_path: data/apps_taco_mix/val.jsonl
+      prompt_style: auto_benchmark_like
 
 train:
   output_root: runs
