@@ -1,0 +1,6 @@
+{"epoch":0,"evaluated_at":"2026-04-08T23:53:29+00:00","global_step":20,"val_loss":0.8288920457043025}
+{"epoch":0,"evaluated_at":"2026-04-08T23:56:41+00:00","global_step":40,"val_loss":0.8271948642877895}
+{"epoch":0,"evaluated_at":"2026-04-09T00:01:09+00:00","global_step":20,"val_loss":0.8291336165401293}
+{"epoch":0,"evaluated_at":"2026-04-09T00:04:23+00:00","global_step":40,"val_loss":0.8270484142746811}
+{"epoch":1,"evaluated_at":"2026-04-09T00:07:48+00:00","global_step":60,"val_loss":0.826159080831868}
+{"epoch":1,"evaluated_at":"2026-04-09T00:10:56+00:00","global_step":80,"val_loss":0.82611536298163}

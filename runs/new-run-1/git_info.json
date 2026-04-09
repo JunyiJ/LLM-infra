@@ -1,0 +1,19 @@
+{
+  "available": true,
+  "branch": "main",
+  "captured_at": "2026-04-08T23:58:17+00:00",
+  "command": "scripts/train_full_sft.py --config configs/experiment.yaml --run-name new-run-1",
+  "commit": "1b4a2afbce8f446c6faac4d96d6fa2eefcab70c9",
+  "is_dirty": true,
+  "repo_root": "/workspace/LLM-infra",
+  "status_short": [
+    "D runs/local-test/run_state.json",
+    " D runs/qwen25_test/run_state.json",
+    " M runs/run_index.jsonl",
+    "?? evalplus_results/humaneval/qwen25-1p5b-run-mix-1_openai_temp_0.0.jsonl",
+    "?? evalplus_results/humaneval/qwen25-1p5b-run-mix-1_openai_temp_0.0.raw.jsonl",
+    "?? evalplus_results/humaneval/qwen25-1p5b-run-mix-1_openai_temp_0.0_eval_results.json",
+    "?? runs/new-run-1/",
+    "?? runs/run-mix-1/"
+  ]
+}

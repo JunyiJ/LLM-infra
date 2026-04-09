@@ -1,0 +1,134 @@
+{
+  "avg_step_time_sec": 8.140586346102117,
+  "avg_tokens_per_sec": 5327.327337125229,
+  "best_val_loss": 0.82611536298163,
+  "checkpoint_history": [
+    {
+      "checkpoint_dir": "runs/new-run-1/checkpoints/checkpoint-00000020",
+      "checkpoint_size_bytes": 9262725990,
+      "checkpoint_size_gb": 8.6266,
+      "global_step": 20,
+      "reason": "mid_epoch",
+      "resume_epoch": 0,
+      "saved_at": "2026-04-09T00:01:09+00:00",
+      "write_time_sec": 17.6222
+    },
+    {
+      "checkpoint_dir": "runs/new-run-1/checkpoints/checkpoint-00000040",
+      "checkpoint_size_bytes": 9262725709,
+      "checkpoint_size_gb": 8.6266,
+      "global_step": 40,
+      "reason": "mid_epoch",
+      "resume_epoch": 0,
+      "saved_at": "2026-04-09T00:04:23+00:00",
+      "write_time_sec": 15.8828
+    },
+    {
+      "checkpoint_dir": "runs/new-run-1/checkpoints/checkpoint-00000044",
+      "checkpoint_size_bytes": 9262725709,
+      "checkpoint_size_gb": 8.6266,
+      "global_step": 44,
+      "reason": "epoch_end",
+      "resume_epoch": 1,
+      "saved_at": "2026-04-09T00:05:10+00:00",
+      "write_time_sec": 16.1714
+    },
+    {
+      "checkpoint_dir": "runs/new-run-1/checkpoints/checkpoint-00000060",
+      "checkpoint_size_bytes": 9262725709,
+      "checkpoint_size_gb": 8.6266,
+      "global_step": 60,
+      "reason": "mid_epoch",
+      "resume_epoch": 1,
+      "saved_at": "2026-04-09T00:07:48+00:00",
+      "write_time_sec": 14.8786
+    },
+    {
+      "checkpoint_dir": "runs/new-run-1/checkpoints/checkpoint-00000080",
+      "checkpoint_size_bytes": 9262725709,
+      "checkpoint_size_gb": 8.6266,
+      "global_step": 80,
+      "reason": "mid_epoch",
+      "resume_epoch": 1,
+      "saved_at": "2026-04-09T00:10:56+00:00",
+      "write_time_sec": 18.8191
+    },
+    {
+      "checkpoint_dir": "runs/new-run-1/checkpoints/checkpoint-00000088",
+      "checkpoint_size_bytes": 9262725709,
+      "checkpoint_size_gb": 8.6266,
+      "global_step": 88,
+      "reason": "epoch_end",
+      "resume_epoch": 2,
+      "saved_at": "2026-04-09T00:12:21+00:00",
+      "write_time_sec": 16.1641
+    }
+  ],
+  "cost_per_completed_optimizer_step_usd": 0.001741,
+  "eval_history": [
+    {
+      "epoch": 0,
+      "evaluated_at": "2026-04-09T00:01:09+00:00",
+      "global_step": 20,
+      "val_loss": 0.8291336165401293
+    },
+    {
+      "epoch": 0,
+      "evaluated_at": "2026-04-09T00:04:23+00:00",
+      "global_step": 40,
+      "val_loss": 0.8270484142746811
+    },
+    {
+      "epoch": 1,
+      "evaluated_at": "2026-04-09T00:07:48+00:00",
+      "global_step": 60,
+      "val_loss": 0.826159080831868
+    },
+    {
+      "epoch": 1,
+      "evaluated_at": "2026-04-09T00:10:56+00:00",
+      "global_step": 80,
+      "val_loss": 0.82611536298163
+    },
+    {
+      "epoch": 2,
+      "evaluated_at": "2026-04-09T00:12:47+00:00",
+      "global_step": 88,
+      "reason": "train_end",
+      "val_loss": 0.8263308047388177
+    }
+  ],
+  "exported_model_dir": "runs/new-run-1/final",
+  "final_val_loss": 0.8263308047388177,
+  "finished_at": "2026-04-09T00:12:54+00:00",
+  "gpu_hourly_cost_usd": 0.77,
+  "gpu_name": "NVIDIA RTX 6000 Ada Generation",
+  "last_train_avg_loss": 0.8216589959338307,
+  "latest_checkpoint": "runs/new-run-1/checkpoints/checkpoint-00000088/training_state.pt",
+  "latest_checkpoint_size_bytes": 9262725991,
+  "latest_checkpoint_size_gb": 8.6266,
+  "model": "Qwen/Qwen2.5-1.5B-Instruct",
+  "num_train_epochs": 2,
+  "optimizer_steps": 88,
+  "peak_gpu_memory_bytes": 21519808512,
+  "peak_gpu_memory_gb": 20.0419,
+  "prompt_style": "auto_benchmark_like",
+  "resume_success": null,
+  "run_name": "new-run-1",
+  "run_table": {
+    "batch": 2,
+    "checkpoint_gb": 8.6266,
+    "final_val_loss": 0.826331,
+    "gpu": "NVIDIA RTX 6000 Ada Generation",
+    "grad_accum": 32,
+    "peak_vram_gb": 20.0419,
+    "resume_success": "",
+    "run_name": "new-run-1",
+    "seq_len": 2048,
+    "tokens_per_sec": 5327.33
+  },
+  "started_at": "2026-04-08T23:58:17+00:00",
+  "status": "completed",
+  "train_rows": 2800,
+  "val_rows": 300
+}
